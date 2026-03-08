@@ -1,0 +1,83 @@
+import { registerAs } from '@nestjs/config';
+
+export interface AppConfiguration {
+  port: number;
+  nodeEnv: string;
+  frontendUrl: string;
+  corsOrigins: string[];
+  defaultTenantId: string;
+
+  jwt: {
+    secret: string;
+    refreshSecret: string;
+    expiry: string;
+    refreshExpiry: string;
+  };
+
+  database: {
+    url: string;
+  };
+
+  paystack: {
+    secretKey: string;
+    publicKey: string;
+    webhookSecret: string;
+  };
+
+  importbrain: {
+    apiUrl: string;
+    serviceKey: string;
+    tenantId: string;
+  };
+}
+
+export const appConfig = registerAs('app', (): AppConfiguration => {
+  const requiredEnvVars = [
+    'JWT_SECRET',
+    'JWT_REFRESH_SECRET',
+    'DATABASE_URL',
+  ] as const;
+
+  for (const envVar of requiredEnvVars) {
+    if (!process.env[envVar]) {
+      throw new Error(`Missing required environment variable: ${envVar}`);
+    }
+  }
+
+  const corsOriginsRaw = process.env.CORS_ORIGINS ?? '';
+  const corsOrigins = corsOriginsRaw
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return {
+    port: parseInt(process.env.PORT ?? '8001', 10),
+    nodeEnv: process.env.NODE_ENV ?? 'development',
+    frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:3001',
+    defaultTenantId: process.env.DEFAULT_TENANT_ID ?? 'default',
+    corsOrigins,
+
+    jwt: {
+      secret: process.env.JWT_SECRET!,
+      refreshSecret: process.env.JWT_REFRESH_SECRET!,
+      expiry: process.env.JWT_EXPIRY ?? '15m',
+      refreshExpiry: process.env.JWT_REFRESH_EXPIRY ?? '7d',
+    },
+
+    database: {
+      url: process.env.DATABASE_URL!,
+    },
+
+    paystack: {
+      secretKey: process.env.PAYSTACK_SECRET_KEY ?? '',
+      publicKey: process.env.PAYSTACK_PUBLIC_KEY ?? '',
+      webhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET ?? '',
+    },
+
+    importbrain: {
+      apiUrl: process.env.IMPORTBRAIN_API_URL ?? 'http://localhost:8000/api',
+      serviceKey: process.env.IMPORTBRAIN_SERVICE_KEY ?? '',
+      tenantId: process.env.IMPORTBRAIN_TENANT_ID ?? '',
+    },
+  };
+});

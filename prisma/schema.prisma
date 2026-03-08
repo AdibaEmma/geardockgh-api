@@ -1,0 +1,319 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── ENUMS ──────────────────────────────────────────────────────
+
+enum CustomerRole {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAYMENT_CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PreorderStatus {
+  RESERVED
+  DEPOSIT_PAID
+  FULLY_PAID
+  READY_TO_SHIP
+  FULFILLED
+  CANCELLED
+}
+
+enum PaymentProvider {
+  PAYSTACK
+  MOMO
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+// ─── TENANT ─────────────────────────────────────────────────────
+
+model Tenant {
+  id        String  @id
+  name      String
+  isActive  Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("tenants")
+}
+
+// ─── CUSTOMER ───────────────────────────────────────────────────
+
+model Customer {
+  id          String       @id @default(uuid())
+  tenantId    String       @map("tenant_id")
+  role        CustomerRole @default(CUSTOMER)
+  firstName   String       @map("first_name")
+  lastName    String       @map("last_name")
+  email        String
+  passwordHash String       @map("password_hash")
+  phone        String?
+  momoNumber   String?      @map("momo_number")
+  isActive    Boolean      @default(true) @map("is_active")
+
+  orders        Order[]
+  preorders     Preorder[]
+  addresses     Address[]
+  refreshTokens RefreshToken[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@unique([email, tenantId])
+  @@index([tenantId])
+  @@index([email])
+  @@map("customers")
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  customerId String   @map("customer_id")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime @map("expires_at")
+  isRevoked  Boolean  @default(false) @map("is_revoked")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([customerId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+// ─── ADDRESS ────────────────────────────────────────────────────
+
+model Address {
+  id         String   @id @default(uuid())
+  customerId String   @map("customer_id")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  label      String?
+  street     String
+  city       String
+  region     String
+  isDefault  Boolean  @default(false) @map("is_default")
+
+  orders Order[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([customerId])
+  @@map("addresses")
+}
+
+// ─── PRODUCT ────────────────────────────────────────────────────
+
+model Product {
+  id                   String  @id @default(uuid())
+  tenantId             String  @map("tenant_id")
+  importbrainProductId String? @map("importbrain_product_id")
+  name                 String
+  slug                 String
+  description          String?
+  pricePesewas         Int     @map("price_pesewas")
+  comparePricePesewas  Int?    @map("compare_price_pesewas")
+  stockCount           Int     @default(0) @map("stock_count")
+  isPreorder           Boolean @default(false) @map("is_preorder")
+  isPublished          Boolean @default(false) @map("is_published")
+  estArrivalDate       DateTime? @map("est_arrival_date")
+  category             String?
+  imagesJson           String? @map("images_json") @db.Text
+  specsJson            String? @map("specs_json") @db.Text
+
+  variants   ProductVariant[]
+  orderItems OrderItem[]
+  preorders  Preorder[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@unique([slug, tenantId])
+  @@index([tenantId])
+  @@index([category])
+  @@index([isPublished])
+  @@map("products")
+}
+
+model ProductVariant {
+  id           String @id @default(uuid())
+  productId    String @map("product_id")
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name         String
+  pricePesewas Int    @map("price_pesewas")
+  stockCount   Int    @default(0) @map("stock_count")
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+// ─── ORDER ──────────────────────────────────────────────────────
+
+model Order {
+  id               String      @id @default(uuid())
+  tenantId         String      @map("tenant_id")
+  orderNumber      String      @map("order_number")
+  customerId       String      @map("customer_id")
+  customer         Customer    @relation(fields: [customerId], references: [id])
+  status           OrderStatus @default(PENDING_PAYMENT)
+  totalPesewas     Int         @map("total_pesewas")
+  subtotalPesewas  Int         @map("subtotal_pesewas")
+  deliveryFee      Int         @default(0) @map("delivery_fee")
+  discountPesewas  Int         @default(0) @map("discount_pesewas")
+  shippingAddressId String?    @map("shipping_address_id")
+  shippingAddress  Address?    @relation(fields: [shippingAddressId], references: [id])
+  notes            String?
+
+  items    OrderItem[]
+  payments Payment[]
+  shipment Shipment?
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@unique([orderNumber, tenantId])
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String          @id @default(uuid())
+  orderId         String          @map("order_id")
+  order           Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId       String          @map("product_id")
+  product         Product         @relation(fields: [productId], references: [id])
+  variantId       String?         @map("variant_id")
+  variant         ProductVariant? @relation(fields: [variantId], references: [id])
+  quantity        Int
+  unitPricePesewas Int            @map("unit_price_pesewas")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+// ─── PREORDER ───────────────────────────────────────────────────
+
+model Preorder {
+  id              String         @id @default(uuid())
+  tenantId        String         @map("tenant_id")
+  customerId      String         @map("customer_id")
+  customer        Customer       @relation(fields: [customerId], references: [id])
+  productId       String         @map("product_id")
+  product         Product        @relation(fields: [productId], references: [id])
+  quantity        Int
+  depositPesewas  Int            @map("deposit_pesewas")
+  totalPesewas    Int            @map("total_pesewas")
+  estArrivalDate  DateTime?      @map("est_arrival_date")
+  status          PreorderStatus @default(RESERVED)
+  notes           String?
+
+  payments Payment[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([productId])
+  @@index([status])
+  @@map("preorders")
+}
+
+// ─── PAYMENT ────────────────────────────────────────────────────
+
+model Payment {
+  id             String          @id @default(uuid())
+  orderId        String?         @map("order_id")
+  order          Order?          @relation(fields: [orderId], references: [id])
+  preorderId     String?         @map("preorder_id")
+  preorder       Preorder?       @relation(fields: [preorderId], references: [id])
+  provider       PaymentProvider
+  transactionId  String?         @map("transaction_id")
+  reference      String?         @unique
+  amountPesewas  Int             @map("amount_pesewas")
+  status         PaymentStatus   @default(PENDING)
+  metadata       String?         @db.Text
+  paidAt         DateTime?       @map("paid_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([orderId])
+  @@index([preorderId])
+  @@index([transactionId])
+  @@index([reference])
+  @@map("payments")
+}
+
+// ─── SHIPMENT ───────────────────────────────────────────────────
+
+model Shipment {
+  id              String    @id @default(uuid())
+  orderId         String    @unique @map("order_id")
+  order           Order     @relation(fields: [orderId], references: [id])
+  carrier         String?
+  trackingNumber  String?   @map("tracking_number")
+  dispatchedAt    DateTime? @map("dispatched_at")
+  deliveredAt     DateTime? @map("delivered_at")
+  notes           String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("shipments")
+}
+
+// ─── EVENT LOG ──────────────────────────────────────────────────
+
+model EventLog {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  event     String
+  direction String   // 'inbound' | 'outbound'
+  payload   String   @db.Text
+  status    String   @default("pending") // 'pending' | 'processed' | 'failed'
+  error     String?  @db.Text
+  processedAt DateTime? @map("processed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([event])
+  @@index([status])
+  @@index([createdAt])
+  @@map("event_logs")
+}
