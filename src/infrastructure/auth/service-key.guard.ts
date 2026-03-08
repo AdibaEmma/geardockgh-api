@@ -4,23 +4,43 @@ import {
   ExecutionContext,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import type { AppConfiguration } from '../config/app.config.js';
+import { PrismaService } from '../database/prisma.service.js';
 
 @Injectable()
 export class ServiceKeyGuard implements CanActivate {
-  private readonly serviceKey: string;
+  constructor(private readonly prisma: PrismaService) {}
 
-  constructor(private readonly configService: ConfigService) {
-    const appConf = this.configService.get<AppConfiguration>('app')!;
-    this.serviceKey = appConf.importbrain.serviceKey;
-  }
-
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const providedKey = request.headers['x-service-key'] as string | undefined;
 
-    if (!providedKey || providedKey !== this.serviceKey) {
+    if (!providedKey) {
+      throw new UnauthorizedException('Missing service key');
+    }
+
+    // Look up the tenant from the request (set by TenantMiddleware or event payload)
+    const tenantId = request.body?.tenantId ?? request.headers['x-tenant-id'];
+
+    if (!tenantId) {
+      throw new UnauthorizedException(
+        'Missing tenant identifier for service key validation',
+      );
+    }
+
+    // Validate against the callback key stored in ImportBrainConnection
+    const connection = await this.prisma.importBrainConnection.findUnique({
+      where: { tenantId },
+    });
+
+    if (
+      !connection ||
+      connection.status !== 'active' ||
+      !connection.callbackKey
+    ) {
+      throw new UnauthorizedException('Invalid or missing service key');
+    }
+
+    if (providedKey !== connection.callbackKey) {
       throw new UnauthorizedException('Invalid or missing service key');
     }
 

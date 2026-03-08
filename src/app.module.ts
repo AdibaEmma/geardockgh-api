@@ -11,6 +11,7 @@ import { EventsModule } from './presentation/modules/events.module.js';
 import { AddressesModule } from './presentation/modules/addresses.module.js';
 import { PaymentsModule } from './presentation/modules/payments.module.js';
 import { AdminModule } from './presentation/modules/admin.module.js';
+import { IntegrationsModule } from './presentation/modules/integrations.module.js';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { AdminModule } from './presentation/modules/admin.module.js';
     AddressesModule,
     PaymentsModule,
     AdminModule,
+    IntegrationsModule,
   ],
   controllers: [],
   providers: [],

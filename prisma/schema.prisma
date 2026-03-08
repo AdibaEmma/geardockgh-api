@@ -297,6 +297,23 @@ model Shipment {
   @@map("shipments")
 }
 
+// ─── IMPORTBRAIN CONNECTION ─────────────────────────────────────
+
+model ImportBrainConnection {
+  id                  String    @id @default(uuid())
+  tenantId            String    @unique @map("tenant_id")
+  importbrainTenantId String    @map("importbrain_tenant_id")
+  integrationId       String    @map("integration_id")
+  apiKey              String    @map("api_key")
+  apiUrl              String    @map("api_url")
+  callbackKey         String?   @map("callback_key")
+  status              String    @default("active")
+  connectedAt         DateTime  @default(now()) @map("connected_at")
+  disconnectedAt      DateTime? @map("disconnected_at")
+
+  @@map("importbrain_connections")
+}
+
 // ─── EVENT LOG ──────────────────────────────────────────────────
 
 model EventLog {

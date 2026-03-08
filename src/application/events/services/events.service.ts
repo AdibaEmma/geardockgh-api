@@ -1,23 +1,12 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import type { EventPayloadDto } from '../dtos/event-payload.dto.js';
-import type { AppConfiguration } from '../../../infrastructure/config/app.config.js';
 
 @Injectable()
 export class EventsService {
   private readonly logger = new Logger(EventsService.name);
-  private readonly importbrainApiUrl: string;
-  private readonly serviceKey: string;
 
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly configService: ConfigService,
-  ) {
-    const appConf = this.configService.get<AppConfiguration>('app')!;
-    this.importbrainApiUrl = appConf.importbrain.apiUrl;
-    this.serviceKey = appConf.importbrain.serviceKey;
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   async processInbound(payload: EventPayloadDto): Promise<void> {
     const eventLog = await this.prisma.eventLog.create({
@@ -53,6 +42,18 @@ export class EventsService {
     event: string,
     data: Record<string, unknown>,
   ): Promise<void> {
+    // Look up active ImportBrain connection from DB
+    const connection = await this.prisma.importBrainConnection.findUnique({
+      where: { tenantId },
+    });
+
+    if (!connection || connection.status !== 'active') {
+      this.logger.warn(
+        `No active ImportBrain connection for tenant ${tenantId} — skipping outbound event "${event}"`,
+      );
+      return;
+    }
+
     const eventLog = await this.prisma.eventLog.create({
       data: {
         tenantId,
@@ -64,14 +65,21 @@ export class EventsService {
     });
 
     try {
-      const response = await fetch(`${this.importbrainApiUrl}/events/receive`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Service-Key': this.serviceKey,
+      const response = await fetch(
+        `${connection.apiUrl}/events/receive`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': connection.apiKey,
+          },
+          body: JSON.stringify({
+            event,
+            tenantId: connection.importbrainTenantId,
+            data,
+          }),
         },
-        body: JSON.stringify({ event, tenantId, data }),
-      });
+      );
 
       if (!response.ok) {
         throw new Error(`ImportBrain API responded with ${response.status}`);

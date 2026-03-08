@@ -26,8 +26,7 @@ export interface AppConfiguration {
 
   importbrain: {
     apiUrl: string;
-    serviceKey: string;
-    tenantId: string;
+    platformKey: string;
   };
 }
 
@@ -76,8 +75,7 @@ export const appConfig = registerAs('app', (): AppConfiguration => {
 
     importbrain: {
       apiUrl: process.env.IMPORTBRAIN_API_URL ?? 'http://localhost:8000/api',
-      serviceKey: process.env.IMPORTBRAIN_SERVICE_KEY ?? '',
-      tenantId: process.env.IMPORTBRAIN_TENANT_ID ?? '',
+      platformKey: process.env.IMPORTBRAIN_PLATFORM_KEY ?? '',
     },
   };
 });
