@@ -25,4 +25,4 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 RUN pnpm prisma generate
 
 EXPOSE 8000
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]
