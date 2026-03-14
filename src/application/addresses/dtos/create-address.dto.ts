@@ -17,12 +17,12 @@ export class CreateAddressDto {
   @IsNotEmpty()
   street!: string;
 
-  @ApiProperty({ example: 'Accra' })
+  @ApiProperty({ example: 'Bolgatanga' })
   @IsString()
   @IsNotEmpty()
   city!: string;
 
-  @ApiProperty({ example: 'Greater Accra' })
+  @ApiProperty({ example: 'Upper East' })
   @IsString()
   @IsNotEmpty()
   region!: string;
