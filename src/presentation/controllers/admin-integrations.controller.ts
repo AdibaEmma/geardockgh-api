@@ -3,6 +3,7 @@ import {
   Post,
   Delete,
   Get,
+  Body,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -23,6 +24,15 @@ export class AdminIntegrationsController {
   constructor(
     private readonly importBrainConnectionService: ImportBrainConnectionService,
   ) {}
+
+  @Post('importbrain/platform-key')
+  async savePlatformKey(
+    @CurrentUser('tenantId') tenantId: string,
+    @Body() body: { platformKey: string },
+  ) {
+    await this.importBrainConnectionService.savePlatformKey(tenantId, body.platformKey);
+    return { success: true };
+  }
 
   @Post('importbrain/connect')
   async connect(@CurrentUser('tenantId') tenantId: string) {

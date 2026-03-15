@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   InternalServerErrorException,
@@ -9,11 +10,18 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import type { AppConfiguration } from '../../../infrastructure/config/app.config.js';
 
+interface ConnectStoreResponse {
+  tenantId: string;
+  integrationId: string;
+  apiKey: string;
+  callbackKey: string;
+}
+
 @Injectable()
 export class ImportBrainConnectionService {
   private readonly logger = new Logger(ImportBrainConnectionService.name);
   private readonly importbrainApiUrl: string;
-  private readonly platformKey: string;
+  private readonly geardockghApiUrl: string;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -21,7 +29,36 @@ export class ImportBrainConnectionService {
   ) {
     const appConf = this.configService.get<AppConfiguration>('app')!;
     this.importbrainApiUrl = appConf.importbrain.apiUrl;
-    this.platformKey = appConf.importbrain.platformKey;
+    this.geardockghApiUrl = appConf.geardockghApiUrl;
+  }
+
+  async savePlatformKey(tenantId: string, platformKey: string): Promise<void> {
+    // Upsert: store platform key on the connection record (or a pre-connection record)
+    const existing = await this.prisma.importBrainConnection.findUnique({
+      where: { tenantId },
+    });
+
+    if (existing) {
+      await this.prisma.importBrainConnection.update({
+        where: { tenantId },
+        data: { platformKey },
+      });
+    } else {
+      // Create a placeholder record to store the key before connect
+      await this.prisma.importBrainConnection.create({
+        data: {
+          tenantId,
+          importbrainTenantId: '',
+          integrationId: '',
+          apiKey: '',
+          apiUrl: this.importbrainApiUrl,
+          platformKey,
+          status: 'pending',
+        },
+      });
+    }
+
+    this.logger.log(`Platform key saved for tenant ${tenantId}`);
   }
 
   async connect(tenantId: string): Promise<{
@@ -29,13 +66,20 @@ export class ImportBrainConnectionService {
     integrationId: string;
     status: string;
   }> {
-    // Check if already connected
-    const existing = await this.prisma.importBrainConnection.findUnique({
+    // Get the stored platform key
+    const existingConnection = await this.prisma.importBrainConnection.findUnique({
       where: { tenantId },
     });
 
-    if (existing && existing.status === 'active') {
+    if (existingConnection && existingConnection.status === 'active') {
       throw new ConflictException('ImportBrain is already connected');
+    }
+
+    const platformKey = existingConnection?.platformKey;
+    if (!platformKey) {
+      throw new BadRequestException(
+        'Platform key not configured. Save the platform key from ImportBrain first.',
+      );
     }
 
     // Get tenant info for the store name
@@ -48,7 +92,7 @@ export class ImportBrainConnectionService {
     }
 
     // Call ImportBrain to connect
-    let connectResponse;
+    let connectResponse: ConnectStoreResponse;
     try {
       const response = await fetch(
         `${this.importbrainApiUrl}/integrations/connect`,
@@ -56,11 +100,12 @@ export class ImportBrainConnectionService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Platform-Key': this.platformKey,
+            'X-Platform-Key': platformKey,
           },
           body: JSON.stringify({
             storeName: tenant.name,
             platform: 'geardockgh',
+            callbackUrl: this.geardockghApiUrl,
           }),
         },
       );
@@ -72,13 +117,11 @@ export class ImportBrainConnectionService {
         );
       }
 
-      connectResponse = (await response.json()) as {
-        tenantId: string;
-        integrationId: string;
-        apiKey: string;
-      };
+      const body = (await response.json()) as { data: ConnectStoreResponse } | ConnectStoreResponse;
+      connectResponse = 'data' in body ? body.data : body;
     } catch (error) {
       if (error instanceof ConflictException) throw error;
+      if (error instanceof BadRequestException) throw error;
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to connect to ImportBrain: ${message}`);
       throw new InternalServerErrorException(
@@ -86,29 +129,29 @@ export class ImportBrainConnectionService {
       );
     }
 
-    // Store connection in DB (upsert in case of reconnect)
-    if (existing) {
+    // Store/update connection in DB
+    const connectionData = {
+      importbrainTenantId: connectResponse.tenantId,
+      integrationId: connectResponse.integrationId,
+      apiKey: connectResponse.apiKey,
+      apiUrl: this.importbrainApiUrl,
+      callbackKey: connectResponse.callbackKey,
+      status: 'active',
+      connectedAt: new Date(),
+      disconnectedAt: null,
+    };
+
+    if (existingConnection) {
       await this.prisma.importBrainConnection.update({
         where: { tenantId },
-        data: {
-          importbrainTenantId: connectResponse.tenantId,
-          integrationId: connectResponse.integrationId,
-          apiKey: connectResponse.apiKey,
-          apiUrl: this.importbrainApiUrl,
-          status: 'active',
-          connectedAt: new Date(),
-          disconnectedAt: null,
-        },
+        data: connectionData,
       });
     } else {
       await this.prisma.importBrainConnection.create({
         data: {
           tenantId,
-          importbrainTenantId: connectResponse.tenantId,
-          integrationId: connectResponse.integrationId,
-          apiKey: connectResponse.apiKey,
-          apiUrl: this.importbrainApiUrl,
-          status: 'active',
+          platformKey,
+          ...connectionData,
         },
       });
     }
@@ -133,6 +176,8 @@ export class ImportBrainConnectionService {
       throw new NotFoundException('No active ImportBrain connection found');
     }
 
+    const platformKey = connection.platformKey;
+
     // Call ImportBrain to disconnect
     try {
       const response = await fetch(
@@ -140,7 +185,7 @@ export class ImportBrainConnectionService {
         {
           method: 'DELETE',
           headers: {
-            'X-Platform-Key': this.platformKey,
+            ...(platformKey ? { 'X-Platform-Key': platformKey } : {}),
           },
         },
       );
@@ -157,7 +202,7 @@ export class ImportBrainConnectionService {
       );
     }
 
-    // Update local record
+    // Update local record — keep the platformKey for reconnection
     await this.prisma.importBrainConnection.update({
       where: { tenantId },
       data: {
@@ -175,14 +220,15 @@ export class ImportBrainConnectionService {
     });
 
     if (!connection) {
-      return { connected: false, status: 'not_connected' };
+      return { connected: false, status: 'not_connected', hasPlatformKey: false };
     }
 
     return {
       connected: connection.status === 'active',
       status: connection.status,
-      integrationId: connection.integrationId,
-      importbrainTenantId: connection.importbrainTenantId,
+      hasPlatformKey: !!connection.platformKey,
+      integrationId: connection.integrationId || undefined,
+      importbrainTenantId: connection.importbrainTenantId || undefined,
       connectedAt: connection.connectedAt,
       disconnectedAt: connection.disconnectedAt,
     };

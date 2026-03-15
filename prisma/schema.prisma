@@ -306,6 +306,7 @@ model ImportBrainConnection {
   integrationId       String    @map("integration_id")
   apiKey              String    @map("api_key")
   apiUrl              String    @map("api_url")
+  platformKey         String?   @map("platform_key")
   callbackKey         String?   @map("callback_key")
   status              String    @default("active")
   connectedAt         DateTime  @default(now()) @map("connected_at")

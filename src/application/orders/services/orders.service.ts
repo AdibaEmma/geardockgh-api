@@ -1,10 +1,12 @@
 import {
   Injectable,
   BadRequestException,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { OrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
+import { ImportBrainSyncService } from '../../integrations/services/importbrain-sync.service.js';
 import type { CreateOrderDto } from '../dtos/create-order.dto.js';
 import type { UpdateOrderDto } from '../dtos/update-order.dto.js';
 import type { OrderQueryDto } from '../dtos/order-query.dto.js';
@@ -12,7 +14,12 @@ import type { PaginatedResult } from '../../../core/interfaces/pagination.interf
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(OrdersService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly importBrainSync: ImportBrainSyncService,
+  ) {}
 
   async create(dto: CreateOrderDto, customerId: string, tenantId: string) {
     const productIds = dto.items.map((i) => i.productId);
@@ -70,8 +77,8 @@ export class OrdersService {
     const orderNumber = this.generateOrderNumber();
     const totalPesewas = subtotalPesewas;
 
-    return this.prisma.$transaction(async (tx) => {
-      const order = await tx.order.create({
+    const order = await this.prisma.$transaction(async (tx) => {
+      const newOrder = await tx.order.create({
         data: {
           tenantId,
           orderNumber,
@@ -87,6 +94,7 @@ export class OrdersService {
         include: {
           items: { include: { product: true, variant: true } },
           payments: true,
+          customer: true,
         },
       });
 
@@ -104,8 +112,15 @@ export class OrdersService {
         }
       }
 
-      return order;
+      return newOrder;
     });
+
+    // Push order to ImportBrain (fire-and-forget)
+    this.importBrainSync.pushOrder(tenantId, order).catch((err) => {
+      this.logger.warn(`Failed to push order to ImportBrain: ${err.message}`);
+    });
+
+    return order;
   }
 
   async findAll(
@@ -167,6 +182,22 @@ export class OrdersService {
 
     if (query.status) {
       where.status = query.status;
+    }
+
+    if (query.search) {
+      where.OR = [
+        { orderNumber: { contains: query.search, mode: 'insensitive' } },
+        {
+          customer: {
+            firstName: { contains: query.search, mode: 'insensitive' },
+          },
+        },
+        {
+          customer: {
+            lastName: { contains: query.search, mode: 'insensitive' },
+          },
+        },
+      ];
     }
 
     const [data, total] = await Promise.all([

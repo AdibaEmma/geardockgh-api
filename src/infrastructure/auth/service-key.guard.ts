@@ -18,31 +18,20 @@ export class ServiceKeyGuard implements CanActivate {
       throw new UnauthorizedException('Missing service key');
     }
 
-    // Look up the tenant from the request (set by TenantMiddleware or event payload)
-    const tenantId = request.body?.tenantId ?? request.headers['x-tenant-id'];
-
-    if (!tenantId) {
-      throw new UnauthorizedException(
-        'Missing tenant identifier for service key validation',
-      );
-    }
-
-    // Validate against the callback key stored in ImportBrainConnection
-    const connection = await this.prisma.importBrainConnection.findUnique({
-      where: { tenantId },
+    // Validate against callback keys stored in ImportBrainConnection
+    const connection = await this.prisma.importBrainConnection.findFirst({
+      where: {
+        callbackKey: providedKey,
+        status: 'active',
+      },
     });
 
-    if (
-      !connection ||
-      connection.status !== 'active' ||
-      !connection.callbackKey
-    ) {
-      throw new UnauthorizedException('Invalid or missing service key');
+    if (!connection) {
+      throw new UnauthorizedException('Invalid service key');
     }
 
-    if (providedKey !== connection.callbackKey) {
-      throw new UnauthorizedException('Invalid or missing service key');
-    }
+    // Set the tenant ID on the request so @TenantId() decorator resolves correctly
+    request['tenantId'] = connection.tenantId;
 
     return true;
   }

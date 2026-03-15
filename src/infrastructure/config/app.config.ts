@@ -24,6 +24,8 @@ export interface AppConfiguration {
     webhookSecret: string;
   };
 
+  geardockghApiUrl: string;
+
   importbrain: {
     apiUrl: string;
     platformKey: string;
@@ -55,6 +57,7 @@ export const appConfig = registerAs('app', (): AppConfiguration => {
     frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:3001',
     defaultTenantId: process.env.DEFAULT_TENANT_ID ?? 'default',
     corsOrigins,
+    geardockghApiUrl: process.env.GEARDOCKGH_API_URL ?? 'http://localhost:8001/api',
 
     jwt: {
       secret: process.env.JWT_SECRET!,
