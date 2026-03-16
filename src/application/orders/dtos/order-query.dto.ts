@@ -1,9 +1,14 @@
-import { IsEnum, IsInt, IsOptional, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { OrderStatus } from '@prisma/client';
 
 export class OrderQueryDto {
+  @ApiPropertyOptional({ description: 'Search by order number or customer name' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
   @ApiPropertyOptional({ enum: OrderStatus, example: OrderStatus.PENDING_PAYMENT })
   @IsOptional()
   @IsEnum(OrderStatus)

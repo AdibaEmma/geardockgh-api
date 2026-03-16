@@ -32,16 +32,22 @@ export class AdminCustomersController {
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
   @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'role', required: false, description: 'Filter by role (CUSTOMER | ADMIN)' })
   async findAll(
     @Query('page') page = 1,
     @Query('limit') limit = 20,
     @Query('search') search?: string,
+    @Query('role') role?: string,
     @CurrentUser() user?: AuthenticatedUser,
   ) {
     const tenantId = user!.tenantId;
     const skip = (page - 1) * limit;
 
     const where: any = { tenantId, deletedAt: null };
+
+    if (role) {
+      where.role = role;
+    }
 
     if (search) {
       where.OR = [

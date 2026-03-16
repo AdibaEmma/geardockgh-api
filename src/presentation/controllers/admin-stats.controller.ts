@@ -64,7 +64,7 @@ export class AdminStatsController {
         where: { tenantId, deletedAt: null, stockCount: { lte: 5 } },
       }),
       this.prisma.customer.count({
-        where: { tenantId, deletedAt: null },
+        where: { tenantId, deletedAt: null, role: 'CUSTOMER' },
       }),
       this.prisma.order.aggregate({
         where: {
@@ -83,7 +83,7 @@ export class AdminStatsController {
         },
       }),
       this.prisma.customer.findMany({
-        where: { tenantId, deletedAt: null },
+        where: { tenantId, deletedAt: null, role: 'CUSTOMER' },
         orderBy: { createdAt: 'desc' },
         take: 5,
         select: {

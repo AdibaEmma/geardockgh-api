@@ -84,6 +84,55 @@ export class ProductsService {
     };
   }
 
+  async findAllAdmin(
+    query: { page?: number; limit?: number; search?: string; category?: string; status?: string },
+    tenantId: string,
+  ): Promise<PaginatedResult<unknown>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.ProductWhereInput = {
+      tenantId,
+      deletedAt: null,
+    };
+
+    if (query.search) {
+      where.name = { contains: query.search, mode: 'insensitive' };
+    }
+
+    if (query.category) {
+      where.category = query.category;
+    }
+
+    if (query.status === 'published') {
+      where.isPublished = true;
+    } else if (query.status === 'draft') {
+      where.isPublished = false;
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.product.findMany({
+        where,
+        include: { variants: true },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return {
+      data,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async findBySlug(slug: string, tenantId: string) {
     const product = await this.prisma.product.findUnique({
       where: { slug_tenantId: { slug, tenantId } },

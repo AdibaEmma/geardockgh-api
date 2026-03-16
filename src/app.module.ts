@@ -12,6 +12,7 @@ import { AddressesModule } from './presentation/modules/addresses.module.js';
 import { PaymentsModule } from './presentation/modules/payments.module.js';
 import { AdminModule } from './presentation/modules/admin.module.js';
 import { IntegrationsModule } from './presentation/modules/integrations.module.js';
+import { ExportModule } from './presentation/modules/export.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { IntegrationsModule } from './presentation/modules/integrations.module.j
     PaymentsModule,
     AdminModule,
     IntegrationsModule,
+    ExportModule,
   ],
   controllers: [],
   providers: [],
