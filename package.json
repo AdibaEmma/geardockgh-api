@@ -94,7 +94,7 @@
     ]
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node --compiler-options {\"module\":\"commonjs\"} prisma/seed.ts"
   },
   "jest": {
     "moduleFileExtensions": ["js", "json", "ts"],
