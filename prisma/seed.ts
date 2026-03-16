@@ -6,9 +6,12 @@ import * as bcrypt from 'bcryptjs';
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
 
-const ADMIN_EMAIL = 'admin@geardockgh.com';
-const ADMIN_PASSWORD = 'Admin@2026';
 const TENANT_ID = 'default';
+
+const ADMINS = [
+  { firstName: 'Admin', lastName: 'GearDockGH', email: 'admin@geardockgh.com', password: 'Admin@2026' },
+  { firstName: 'Emmanuel', lastName: 'Abaagah', email: 'eabaagah@gmail.com', password: 'Firefury@4000' },
+];
 
 async function main() {
   // Ensure default tenant exists
@@ -22,39 +25,39 @@ async function main() {
     console.log(`Tenant already exists: ${TENANT_ID}`);
   }
 
-  const existing = await prisma.customer.findUnique({
-    where: { email_tenantId: { email: ADMIN_EMAIL, tenantId: TENANT_ID } },
-  });
+  for (const admin of ADMINS) {
+    const existing = await prisma.customer.findUnique({
+      where: { email_tenantId: { email: admin.email, tenantId: TENANT_ID } },
+    });
 
-  if (existing) {
-    if (existing.role !== 'ADMIN') {
-      await prisma.customer.update({
-        where: { id: existing.id },
-        data: { role: 'ADMIN' },
-      });
-      console.log(`Promoted ${ADMIN_EMAIL} to ADMIN`);
-    } else {
-      console.log(`Admin user already exists: ${ADMIN_EMAIL}`);
+    if (existing) {
+      if (existing.role !== 'ADMIN') {
+        await prisma.customer.update({
+          where: { id: existing.id },
+          data: { role: 'ADMIN' },
+        });
+        console.log(`Promoted ${admin.email} to ADMIN`);
+      } else {
+        console.log(`Admin already exists: ${admin.email}`);
+      }
+      continue;
     }
-    return;
+
+    const passwordHash = await bcrypt.hash(admin.password, 12);
+
+    await prisma.customer.create({
+      data: {
+        tenantId: TENANT_ID,
+        role: 'ADMIN',
+        firstName: admin.firstName,
+        lastName: admin.lastName,
+        email: admin.email,
+        passwordHash,
+      },
+    });
+
+    console.log(`Admin created: ${admin.email}`);
   }
-
-  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
-
-  await prisma.customer.create({
-    data: {
-      tenantId: TENANT_ID,
-      role: 'ADMIN',
-      firstName: 'Admin',
-      lastName: 'GearDockGH',
-      email: ADMIN_EMAIL,
-      passwordHash,
-    },
-  });
-
-  console.log(`Admin user created:`);
-  console.log(`  Email:    ${ADMIN_EMAIL}`);
-  console.log(`  Password: ${ADMIN_PASSWORD}`);
 }
 
 main()
