@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -23,13 +24,13 @@ export class EventsController {
     summary: 'Receive inbound events from ImportBrain (ServiceKey-protected)',
   })
   async receive(
-    @Headers('x-tenant-id') tenantId: string,
+    @Req() req: { tenantId: string },
     @Headers('x-event-type') eventType: string,
     @Body() body: { event: string; timestamp: string; data: Record<string, unknown> },
   ) {
     await this.eventsService.processInbound({
       event: body.event ?? eventType,
-      tenantId,
+      tenantId: req.tenantId,
       data: body.data,
       timestamp: body.timestamp,
     });
