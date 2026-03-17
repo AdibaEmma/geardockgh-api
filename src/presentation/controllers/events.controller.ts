@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Headers,
   HttpCode,
   HttpStatus,
   Post,
@@ -8,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { EventsService } from '../../application/events/services/events.service.js';
-import { EventPayloadDto } from '../../application/events/dtos/event-payload.dto.js';
 import { ServiceKeyGuard } from '../../infrastructure/auth/service-key.guard.js';
 
 @ApiTags('Events')
@@ -22,8 +22,17 @@ export class EventsController {
   @ApiOperation({
     summary: 'Receive inbound events from ImportBrain (ServiceKey-protected)',
   })
-  async receive(@Body() payload: EventPayloadDto) {
-    await this.eventsService.processInbound(payload);
+  async receive(
+    @Headers('x-tenant-id') tenantId: string,
+    @Headers('x-event-type') eventType: string,
+    @Body() body: { event: string; timestamp: string; data: Record<string, unknown> },
+  ) {
+    await this.eventsService.processInbound({
+      event: body.event ?? eventType,
+      tenantId,
+      data: body.data,
+      timestamp: body.timestamp,
+    });
     return { received: true };
   }
 }
