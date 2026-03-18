@@ -43,6 +43,12 @@ export class ProductsController {
     return this.productsService.findAll(query, tenantId);
   }
 
+  @Get('featured')
+  @ApiOperation({ summary: 'Get featured products (public)' })
+  async findFeatured(@TenantId() tenantId: string) {
+    return this.productsService.findFeatured(tenantId);
+  }
+
   @Get(':slug')
   @ApiOperation({ summary: 'Get a product by slug (public)' })
   async findBySlug(

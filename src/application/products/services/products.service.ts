@@ -29,6 +29,7 @@ export class ProductsService {
         preorderMinUnits: dto.preorderMinUnits,
         estArrivalDate: dto.estArrivalDate ? new Date(dto.estArrivalDate) : undefined,
         isPublished: dto.isPublished ?? false,
+        isFeatured: dto.isFeatured ?? false,
         category: dto.category,
         imagesJson: dto.imagesJson,
         specsJson: dto.specsJson,
@@ -193,6 +194,20 @@ export class ProductsService {
     return this.prisma.product.update({
       where: { id },
       data: { deletedAt: new Date() },
+    });
+  }
+
+  async findFeatured(tenantId: string, limit = 8) {
+    return this.prisma.product.findMany({
+      where: {
+        tenantId,
+        isPublished: true,
+        isFeatured: true,
+        deletedAt: null,
+      },
+      include: { variants: true },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
     });
   }
 

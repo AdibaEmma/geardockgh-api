@@ -70,6 +70,11 @@ export class CreateProductDto {
   @IsBoolean()
   isPublished?: boolean;
 
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  isFeatured?: boolean;
+
   @ApiPropertyOptional({ example: 'Laptops' })
   @IsOptional()
   @IsString()

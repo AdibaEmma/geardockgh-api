@@ -72,16 +72,6 @@ export class AdminProductsController {
     return this.productsService.create(dto, user.tenantId);
   }
 
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update a product (admin)' })
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateProductDto,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
-    return this.productsService.update(id, dto, user.tenantId);
-  }
-
   @Patch(':id/toggle-publish')
   @ApiOperation({ summary: 'Toggle product published status (admin)' })
   async togglePublish(
@@ -90,6 +80,26 @@ export class AdminProductsController {
   ) {
     const product = await this.productsService.findById(id, user.tenantId);
     return this.productsService.update(id, { isPublished: !product.isPublished }, user.tenantId);
+  }
+
+  @Patch(':id/toggle-featured')
+  @ApiOperation({ summary: 'Toggle product featured status (admin)' })
+  async toggleFeatured(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const product = await this.productsService.findById(id, user.tenantId);
+    return this.productsService.update(id, { isFeatured: !product.isFeatured }, user.tenantId);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a product (admin)' })
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateProductDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.productsService.update(id, dto, user.tenantId);
   }
 
   @Delete(':id')
