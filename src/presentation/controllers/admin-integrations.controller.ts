@@ -14,6 +14,7 @@ import { RolesGuard } from '../../infrastructure/auth/roles.guard.js';
 import { Roles } from '../../infrastructure/auth/roles.decorator.js';
 import { CurrentUser } from '../../infrastructure/auth/current-user.decorator.js';
 import { ImportBrainConnectionService } from '../../application/integrations/services/importbrain-connection.service.js';
+import { ImportBrainSyncPullService } from '../../application/integrations/services/importbrain-sync-pull.service.js';
 
 @ApiTags('Admin - Integrations')
 @Controller('admin/integrations')
@@ -23,6 +24,7 @@ import { ImportBrainConnectionService } from '../../application/integrations/ser
 export class AdminIntegrationsController {
   constructor(
     private readonly importBrainConnectionService: ImportBrainConnectionService,
+    private readonly syncPullService: ImportBrainSyncPullService,
   ) {}
 
   @Post('importbrain/platform-key')
@@ -58,6 +60,11 @@ export class AdminIntegrationsController {
   ) {
     await this.importBrainConnectionService.updatePlatformKey(tenantId, body.platformKey);
     return { success: true };
+  }
+
+  @Post('importbrain/sync')
+  async syncProducts(@CurrentUser('tenantId') tenantId: string) {
+    return this.syncPullService.syncProducts(tenantId);
   }
 
   @Get('importbrain/status')
