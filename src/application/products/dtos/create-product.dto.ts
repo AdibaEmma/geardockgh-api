@@ -43,6 +43,28 @@ export class CreateProductDto {
   @IsBoolean()
   isPreorder?: boolean;
 
+  @ApiPropertyOptional({ example: 'percentage', description: 'percentage or fixed' })
+  @IsOptional()
+  @IsString()
+  preorderDepositType?: string;
+
+  @ApiPropertyOptional({ example: 50, description: 'Pesewas if fixed; 0-100 if percentage' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  preorderDepositValue?: number;
+
+  @ApiPropertyOptional({ example: 10, description: 'Minimum pre-order units before production' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  preorderMinUnits?: number;
+
+  @ApiPropertyOptional({ example: '2026-05-01T00:00:00.000Z' })
+  @IsOptional()
+  @IsString()
+  estArrivalDate?: string;
+
   @ApiPropertyOptional({ example: true })
   @IsOptional()
   @IsBoolean()

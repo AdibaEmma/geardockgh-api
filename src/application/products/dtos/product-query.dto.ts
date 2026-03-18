@@ -1,6 +1,6 @@
-import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class ProductQueryDto {
   @ApiPropertyOptional({ example: 'macbook', description: 'Search by name' })
@@ -12,6 +12,16 @@ export class ProductQueryDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return undefined;
+  })
+  isPreorder?: boolean;
 
   @ApiPropertyOptional({ example: 1, default: 1 })
   @IsOptional()

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import type { CreateProductDto } from '../dtos/create-product.dto.js';
@@ -11,6 +11,7 @@ export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateProductDto, tenantId: string) {
+    this.validateImagesJson(dto.imagesJson);
     const slug = this.generateSlug(dto.name);
 
     return this.prisma.product.create({
@@ -23,6 +24,10 @@ export class ProductsService {
         comparePricePesewas: dto.comparePricePesewas,
         stockCount: dto.stockCount ?? 0,
         isPreorder: dto.isPreorder ?? false,
+        preorderDepositType: dto.preorderDepositType,
+        preorderDepositValue: dto.preorderDepositValue,
+        preorderMinUnits: dto.preorderMinUnits,
+        estArrivalDate: dto.estArrivalDate ? new Date(dto.estArrivalDate) : undefined,
         isPublished: dto.isPublished ?? false,
         category: dto.category,
         imagesJson: dto.imagesJson,
@@ -52,6 +57,10 @@ export class ProductsService {
 
     if (query.category) {
       where.category = query.category;
+    }
+
+    if (query.isPreorder !== undefined) {
+      where.isPreorder = query.isPreorder;
     }
 
     const orderBy: Prisma.ProductOrderByWithRelationInput = {};
@@ -160,6 +169,9 @@ export class ProductsService {
   }
 
   async update(id: string, dto: UpdateProductDto, tenantId: string) {
+    if (dto.imagesJson !== undefined) {
+      this.validateImagesJson(dto.imagesJson);
+    }
     await this.findById(id, tenantId);
 
     const data: Prisma.ProductUpdateInput = { ...dto };
@@ -182,6 +194,31 @@ export class ProductsService {
       where: { id },
       data: { deletedAt: new Date() },
     });
+  }
+
+  private validateImagesJson(imagesJson?: string | null): void {
+    if (!imagesJson) return;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(imagesJson);
+    } catch {
+      throw new BadRequestException('imagesJson must be a valid JSON string');
+    }
+
+    if (!Array.isArray(parsed)) {
+      throw new BadRequestException('imagesJson must be a JSON array');
+    }
+
+    if (parsed.length > 8) {
+      throw new BadRequestException('Maximum 8 images allowed per product');
+    }
+
+    for (const url of parsed) {
+      if (typeof url !== 'string' || !url.startsWith('https://')) {
+        throw new BadRequestException('Each image must be a valid HTTPS URL');
+      }
+    }
   }
 
   private generateSlug(name: string): string {

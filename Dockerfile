@@ -24,5 +24,5 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 RUN pnpm prisma generate
 
-EXPOSE 8000
-CMD ["node", "dist/src/main"]
+EXPOSE 8001
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/src/main"]

@@ -136,8 +136,12 @@ model Product {
   stockCount           Int     @default(0) @map("stock_count")
   isPreorder           Boolean @default(false) @map("is_preorder")
   isPublished          Boolean @default(false) @map("is_published")
-  estArrivalDate       DateTime? @map("est_arrival_date")
-  category             String?
+  estArrivalDate        DateTime? @map("est_arrival_date")
+  preorderDepositType   String?   @map("preorder_deposit_type")
+  preorderDepositValue  Int?      @map("preorder_deposit_value")
+  preorderMinUnits      Int?      @map("preorder_min_units")
+  preorderSlotsTaken    Int       @default(0) @map("preorder_slots_taken")
+  category              String?
   imagesJson           String? @map("images_json") @db.Text
   specsJson            String? @map("specs_json") @db.Text
 
@@ -235,8 +239,10 @@ model Preorder {
   product         Product        @relation(fields: [productId], references: [id])
   quantity        Int
   depositPesewas  Int            @map("deposit_pesewas")
-  totalPesewas    Int            @map("total_pesewas")
-  estArrivalDate  DateTime?      @map("est_arrival_date")
+  totalPesewas             Int            @map("total_pesewas")
+  balancePesewas           Int            @map("balance_pesewas")
+  paystackBalanceReference String?        @map("paystack_balance_reference")
+  estArrivalDate           DateTime?      @map("est_arrival_date")
   status          PreorderStatus @default(RESERVED)
   notes           String?
 
@@ -334,4 +340,28 @@ model EventLog {
   @@index([status])
   @@index([createdAt])
   @@map("event_logs")
+}
+
+// ─── NOTIFICATION LOG ───────────────────────────────────────────
+
+model NotificationLog {
+  id           String    @id @default(uuid())
+  tenantId     String    @map("tenant_id")
+  preorderId   String?   @map("preorder_id")
+  orderId      String?   @map("order_id")
+  customerId   String    @map("customer_id")
+  channel      String    // 'whatsapp' | 'sms' | 'email'
+  templateName String    @map("template_name")
+  recipient    String
+  payload      String?   @db.Text
+  status       String    @default("pending") // 'pending' | 'sent' | 'failed'
+  error        String?   @db.Text
+  sentAt       DateTime? @map("sent_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([preorderId])
+  @@index([status])
+  @@map("notification_logs")
 }

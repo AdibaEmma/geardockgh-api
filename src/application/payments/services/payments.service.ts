@@ -81,6 +81,120 @@ export class PaymentsService {
     };
   }
 
+  async initializePreorderDeposit(
+    preorderId: string,
+    provider: 'PAYSTACK' | 'MOMO' | 'BANK_TRANSFER',
+    customerId: string,
+    tenantId: string,
+    callbackUrl?: string,
+  ) {
+    const preorder = await this.prisma.preorder.findFirst({
+      where: { id: preorderId, customerId, tenantId, deletedAt: null },
+      include: { customer: true },
+    });
+
+    if (!preorder) {
+      throw new NotFoundException('Pre-order not found');
+    }
+
+    if (preorder.status !== 'RESERVED') {
+      throw new BadRequestException('Pre-order deposit already paid or cancelled');
+    }
+
+    const reference = `GD-DEP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const payment = await this.prisma.payment.create({
+      data: {
+        preorderId: preorder.id,
+        provider,
+        amountPesewas: preorder.depositPesewas,
+        reference,
+        status: 'PENDING',
+        metadata: JSON.stringify({ type: 'deposit', preorderId: preorder.id }),
+      },
+    });
+
+    if (provider === 'PAYSTACK') {
+      const paystackResponse = await this.initializePaystack({
+        email: preorder.customer.email,
+        amount: preorder.depositPesewas,
+        reference,
+        callbackUrl,
+      });
+
+      return {
+        paymentId: payment.id,
+        reference,
+        authorizationUrl: paystackResponse.authorization_url,
+        accessCode: paystackResponse.access_code,
+      };
+    }
+
+    return {
+      paymentId: payment.id,
+      reference,
+      provider,
+      amountPesewas: preorder.depositPesewas,
+    };
+  }
+
+  async initializeBalancePayment(
+    preorderId: string,
+    provider: 'PAYSTACK' | 'MOMO' | 'BANK_TRANSFER',
+    customerId: string,
+    tenantId: string,
+    callbackUrl?: string,
+  ) {
+    const preorder = await this.prisma.preorder.findFirst({
+      where: { id: preorderId, customerId, tenantId, deletedAt: null },
+      include: { customer: true },
+    });
+
+    if (!preorder) {
+      throw new NotFoundException('Pre-order not found');
+    }
+
+    if (preorder.status !== 'DEPOSIT_PAID' && preorder.status !== 'READY_TO_SHIP') {
+      throw new BadRequestException('Pre-order is not ready for balance payment');
+    }
+
+    const reference = `GD-BAL-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const payment = await this.prisma.payment.create({
+      data: {
+        preorderId: preorder.id,
+        provider,
+        amountPesewas: preorder.balancePesewas,
+        reference,
+        status: 'PENDING',
+        metadata: JSON.stringify({ type: 'balance', preorderId: preorder.id }),
+      },
+    });
+
+    if (provider === 'PAYSTACK') {
+      const paystackResponse = await this.initializePaystack({
+        email: preorder.customer.email,
+        amount: preorder.balancePesewas,
+        reference,
+        callbackUrl,
+      });
+
+      return {
+        paymentId: payment.id,
+        reference,
+        authorizationUrl: paystackResponse.authorization_url,
+        accessCode: paystackResponse.access_code,
+      };
+    }
+
+    return {
+      paymentId: payment.id,
+      reference,
+      provider,
+      amountPesewas: preorder.balancePesewas,
+    };
+  }
+
   async verifyPayment(reference: string, customerId: string) {
     const payment = await this.prisma.payment.findUnique({
       where: { reference },
@@ -150,6 +264,26 @@ export class PaymentsService {
           where: { id: payment.orderId },
           data: { status: OrderStatus.PAYMENT_CONFIRMED },
         });
+      }
+
+      if (payment.preorderId) {
+        const metadata = payment.metadata ? JSON.parse(payment.metadata) : {};
+        const paymentType = metadata.type;
+
+        if (paymentType === 'deposit') {
+          await tx.preorder.update({
+            where: { id: payment.preorderId },
+            data: { status: 'DEPOSIT_PAID' },
+          });
+        } else if (paymentType === 'balance') {
+          await tx.preorder.update({
+            where: { id: payment.preorderId },
+            data: {
+              status: 'FULLY_PAID',
+              paystackBalanceReference: payment.reference,
+            },
+          });
+        }
       }
 
       return payment;

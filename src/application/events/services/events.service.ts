@@ -137,6 +137,9 @@ export class EventsService {
       case 'stock.updated':
         await this.handleStockUpdate(data);
         break;
+      case 'batch_arrival_confirmed':
+        await this.handleBatchArrival(tenantId, data);
+        break;
       default:
         this.logger.warn(`Unhandled event type: ${event}`);
     }
@@ -171,6 +174,14 @@ export class EventsService {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
 
+    // Images: prefer imagesJson array from ImportBrain, fall back to single imageUrl
+    let productImagesJson: string | null = null;
+    if (data.imagesJson) {
+      productImagesJson = data.imagesJson as string;
+    } else if (data.imageUrl) {
+      productImagesJson = JSON.stringify([data.imageUrl as string]);
+    }
+
     await this.prisma.product.create({
       data: {
         tenantId,
@@ -180,6 +191,8 @@ export class EventsService {
         description: (data.description as string) ?? null,
         pricePesewas,
         stockCount: stock,
+        category: (data.category as string) ?? null,
+        imagesJson: productImagesJson,
         isPublished: false,
       },
     });
@@ -207,6 +220,43 @@ export class EventsService {
     if (data.currentStock !== undefined) {
       updateData.stockCount = data.currentStock;
     }
+
+    // Images: prefer imagesJson (multi-image) from ImportBrain, fall back to single imageUrl
+    if (data.imagesJson !== undefined) {
+      // ImportBrain sent multi-image data — use it directly
+      updateData.imagesJson = data.imagesJson as string | null;
+    } else if (data.imageUrl !== undefined) {
+      const imageUrl = data.imageUrl as string | null;
+      if (imageUrl) {
+        // Merge with existing images instead of overwriting
+        const product = await this.prisma.product.findFirst({
+          where: { importbrainProductId: productId, tenantId },
+          select: { imagesJson: true },
+        });
+
+        let existingImages: string[] = [];
+        if (product?.imagesJson) {
+          try { existingImages = JSON.parse(product.imagesJson); } catch { /* ignore */ }
+        }
+
+        if (!existingImages.includes(imageUrl)) {
+          // Prepend ImportBrain image as the primary
+          existingImages = [imageUrl, ...existingImages];
+        }
+
+        updateData.imagesJson = JSON.stringify(existingImages);
+      }
+      // If imageUrl is null, do NOT clear existing images (admin may have manually added them)
+    }
+    if (data.category !== undefined) updateData.category = data.category;
+
+    if (data.isPreorder !== undefined) updateData.isPreorder = data.isPreorder;
+    if (data.estArrivalDate !== undefined) {
+      updateData.estArrivalDate = data.estArrivalDate ? new Date(data.estArrivalDate as string) : null;
+    }
+    if (data.preorderDepositType !== undefined) updateData.preorderDepositType = data.preorderDepositType;
+    if (data.preorderDepositValue !== undefined) updateData.preorderDepositValue = data.preorderDepositValue;
+    if (data.preorderMinUnits !== undefined) updateData.preorderMinUnits = data.preorderMinUnits;
 
     if (Object.keys(updateData).length === 0) {
       this.logger.warn(`product.updated event for ${productId} has no mappable fields`);
@@ -253,5 +303,42 @@ export class EventsService {
     });
 
     this.logger.log(`Updated stock to ${stockCount} for ${result.count} product(s) (ImportBrain: ${productId})`);
+  }
+
+  private async handleBatchArrival(
+    tenantId: string,
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const productIds = data.productIds as string[] | undefined;
+    if (!productIds || productIds.length === 0) {
+      this.logger.warn('batch_arrival_confirmed event missing productIds');
+      return;
+    }
+
+    // Find all preorders with DEPOSIT_PAID status for the arrived products
+    const preorders = await this.prisma.preorder.findMany({
+      where: {
+        tenantId,
+        productId: { in: productIds },
+        status: 'DEPOSIT_PAID',
+        deletedAt: null,
+      },
+      include: { customer: true, product: true },
+    });
+
+    this.logger.log(
+      `Batch arrival: found ${preorders.length} preorder(s) awaiting balance payment`,
+    );
+
+    // Update preorder status to READY_TO_SHIP
+    for (const preorder of preorders) {
+      await this.prisma.preorder.update({
+        where: { id: preorder.id },
+        data: { status: 'READY_TO_SHIP' },
+      });
+    }
+
+    // BullMQ balance-request notifications will be enqueued by NotificationService
+    // when it's wired into the events flow
   }
 }

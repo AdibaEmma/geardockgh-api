@@ -13,6 +13,10 @@ import { PaymentsModule } from './presentation/modules/payments.module.js';
 import { AdminModule } from './presentation/modules/admin.module.js';
 import { IntegrationsModule } from './presentation/modules/integrations.module.js';
 import { ExportModule } from './presentation/modules/export.module.js';
+import { QueueModule } from './infrastructure/queue/queue.module.js';
+import { NotificationsModule } from './application/notifications/notifications.module.js';
+import { PreordersModule } from './presentation/modules/preorders.module.js';
+import { UploadsModule } from './presentation/modules/uploads.module.js';
 
 @Module({
   imports: [
@@ -31,6 +35,10 @@ import { ExportModule } from './presentation/modules/export.module.js';
     AdminModule,
     IntegrationsModule,
     ExportModule,
+    QueueModule.register(),
+    NotificationsModule,
+    PreordersModule,
+    UploadsModule,
   ],
   controllers: [],
   providers: [],

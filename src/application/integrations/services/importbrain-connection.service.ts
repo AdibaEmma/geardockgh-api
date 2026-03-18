@@ -214,6 +214,57 @@ export class ImportBrainConnectionService {
     this.logger.log(`Disconnected tenant ${tenantId} from ImportBrain`);
   }
 
+  async deleteConnection(tenantId: string): Promise<void> {
+    const connection = await this.prisma.importBrainConnection.findUnique({
+      where: { tenantId },
+    });
+
+    if (!connection) {
+      throw new NotFoundException('No ImportBrain connection found');
+    }
+
+    // If active, disconnect from ImportBrain first
+    if (connection.status === 'active') {
+      try {
+        await fetch(
+          `${this.importbrainApiUrl}/integrations/${connection.integrationId}/disconnect`,
+          {
+            method: 'DELETE',
+            headers: {
+              ...(connection.platformKey ? { 'X-Platform-Key': connection.platformKey } : {}),
+            },
+          },
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`Failed to notify ImportBrain during delete: ${message}`);
+      }
+    }
+
+    await this.prisma.importBrainConnection.delete({
+      where: { tenantId },
+    });
+
+    this.logger.log(`Deleted ImportBrain connection for tenant ${tenantId}`);
+  }
+
+  async updatePlatformKey(tenantId: string, platformKey: string): Promise<void> {
+    const connection = await this.prisma.importBrainConnection.findUnique({
+      where: { tenantId },
+    });
+
+    if (!connection) {
+      throw new NotFoundException('No ImportBrain connection found. Save a platform key first.');
+    }
+
+    await this.prisma.importBrainConnection.update({
+      where: { tenantId },
+      data: { platformKey },
+    });
+
+    this.logger.log(`Platform key updated for tenant ${tenantId}`);
+  }
+
   async getStatus(tenantId: string) {
     const connection = await this.prisma.importBrainConnection.findUnique({
       where: { tenantId },

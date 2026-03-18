@@ -30,6 +30,25 @@ export interface AppConfiguration {
     apiUrl: string;
     platformKey: string;
   };
+
+  redis: {
+    url: string;
+  };
+
+  arkesel: {
+    apiKey: string;
+    senderId: string;
+  };
+
+  resend: {
+    apiKey: string;
+  };
+
+  cloudinary: {
+    cloudName: string;
+    apiKey: string;
+    apiSecret: string;
+  };
 }
 
 export const appConfig = registerAs('app', (): AppConfiguration => {
@@ -79,6 +98,25 @@ export const appConfig = registerAs('app', (): AppConfiguration => {
     importbrain: {
       apiUrl: process.env.IMPORTBRAIN_API_URL ?? 'http://localhost:8000/api',
       platformKey: process.env.IMPORTBRAIN_PLATFORM_KEY ?? '',
+    },
+
+    redis: {
+      url: process.env.REDIS_URL ?? 'redis://localhost:6379',
+    },
+
+    arkesel: {
+      apiKey: process.env.ARKESEL_API_KEY ?? '',
+      senderId: process.env.ARKESEL_SENDER_ID ?? 'GearDockGH',
+    },
+
+    resend: {
+      apiKey: process.env.RESEND_API_KEY ?? '',
+    },
+
+    cloudinary: {
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME ?? '',
+      apiKey: process.env.CLOUDINARY_API_KEY ?? '',
+      apiSecret: process.env.CLOUDINARY_API_SECRET ?? '',
     },
   };
 });

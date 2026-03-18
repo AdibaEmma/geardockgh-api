@@ -54,6 +54,15 @@ export class AdminProductsController {
     );
   }
 
+  @Get(':id')
+  @ApiOperation({ summary: 'Get product by ID (admin)' })
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.productsService.findById(id, user.tenantId);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a new product (admin)' })
   async create(
@@ -71,6 +80,16 @@ export class AdminProductsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.productsService.update(id, dto, user.tenantId);
+  }
+
+  @Patch(':id/toggle-publish')
+  @ApiOperation({ summary: 'Toggle product published status (admin)' })
+  async togglePublish(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    const product = await this.productsService.findById(id, user.tenantId);
+    return this.productsService.update(id, { isPublished: !product.isPublished }, user.tenantId);
   }
 
   @Delete(':id')

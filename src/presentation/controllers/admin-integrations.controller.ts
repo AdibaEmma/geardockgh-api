@@ -45,6 +45,21 @@ export class AdminIntegrationsController {
     await this.importBrainConnectionService.disconnect(tenantId);
   }
 
+  @Delete('importbrain/connection')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteConnection(@CurrentUser('tenantId') tenantId: string) {
+    await this.importBrainConnectionService.deleteConnection(tenantId);
+  }
+
+  @Post('importbrain/platform-key/update')
+  async updatePlatformKey(
+    @CurrentUser('tenantId') tenantId: string,
+    @Body() body: { platformKey: string },
+  ) {
+    await this.importBrainConnectionService.updatePlatformKey(tenantId, body.platformKey);
+    return { success: true };
+  }
+
   @Get('importbrain/status')
   async getStatus(@CurrentUser('tenantId') tenantId: string) {
     return this.importBrainConnectionService.getStatus(tenantId);
