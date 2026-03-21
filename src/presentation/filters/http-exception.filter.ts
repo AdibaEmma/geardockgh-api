@@ -56,10 +56,15 @@ export class HttpExceptionFilter implements ExceptionFilter {
       message = 'Internal server error';
       code = 'INTERNAL_SERVER_ERROR';
 
-      this.logger.error(
-        `Unhandled exception: ${exception instanceof Error ? exception.message : String(exception)}`,
-        exception instanceof Error ? exception.stack : undefined,
-      );
+      const errorMessage = exception instanceof Error ? exception.message : String(exception);
+      if (process.env.NODE_ENV === 'production') {
+        this.logger.error(`Unhandled exception: ${errorMessage}`);
+      } else {
+        this.logger.error(
+          `Unhandled exception: ${errorMessage}`,
+          exception instanceof Error ? exception.stack : undefined,
+        );
+      }
     }
 
     const errorResponse: ErrorResponse = {

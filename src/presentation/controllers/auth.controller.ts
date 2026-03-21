@@ -13,6 +13,7 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from '../../application/auth/services/auth.service.js';
 import { CreateCustomerDto } from '../../application/auth/dtos/register.dto.js';
 import { LoginDto } from '../../application/auth/dtos/login.dto.js';
@@ -29,6 +30,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ long: { limit: 5, ttl: 3600000 } })
   @ApiOperation({ summary: 'Register a new customer' })
   async register(
     @Body() dto: CreateCustomerDto,
@@ -38,6 +41,8 @@ export class AuthController {
   }
 
   @Post('login')
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ long: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login with email and password' })
   async login(
@@ -48,7 +53,8 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @UseGuards(JwtRefreshGuard)
+  @UseGuards(ThrottlerGuard, JwtRefreshGuard)
+  @Throttle({ long: { limit: 10, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
   async refresh(

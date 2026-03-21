@@ -174,16 +174,15 @@ export class PaymentsService {
   }
 
   async verifyPayment(reference: string, customerId: string) {
-    const payment = await this.prisma.payment.findUnique({
-      where: { reference },
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        reference,
+        order: { customerId },
+      },
       include: { order: true },
     });
 
     if (!payment) {
-      throw new NotFoundException('Payment not found');
-    }
-
-    if (payment.order?.customerId !== customerId) {
       throw new NotFoundException('Payment not found');
     }
 
@@ -244,7 +243,8 @@ export class PaymentsService {
       }
 
       if (payment.preorderId) {
-        const metadata = payment.metadata ? JSON.parse(payment.metadata) : {};
+        let metadata: Record<string, unknown> = {};
+        try { metadata = payment.metadata ? JSON.parse(payment.metadata) : {}; } catch { /* corrupted metadata */ }
         const paymentType = metadata.type;
 
         if (paymentType === 'deposit') {

@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
+import { validateExternalUrl } from '../../../core/utils/url-validator.js';
 import type { AppConfiguration } from '../../../infrastructure/config/app.config.js';
 
 interface ConnectStoreResponse {
@@ -92,10 +93,12 @@ export class ImportBrainConnectionService {
     }
 
     // Call ImportBrain to connect
+    const connectUrl = `${this.importbrainApiUrl}/integrations/connect`;
+    validateExternalUrl(connectUrl);
     let connectResponse: ConnectStoreResponse;
     try {
       const response = await fetch(
-        `${this.importbrainApiUrl}/integrations/connect`,
+        connectUrl,
         {
           method: 'POST',
           headers: {

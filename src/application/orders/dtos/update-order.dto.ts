@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderStatus } from '@prisma/client';
 
@@ -11,5 +11,6 @@ export class UpdateOrderDto {
   @ApiPropertyOptional({ example: 'Order is being prepared' })
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   notes?: string;
 }

@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -51,5 +52,6 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty()
+  @MaxLength(500)
   notes?: string;
 }

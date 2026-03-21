@@ -21,17 +21,32 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  app.use(helmet());
+  app.use(helmet({
+    contentSecurityPolicy: appConfig.nodeEnv === 'production' ? undefined : false,
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  }));
   app.use(compression());
   app.use(cookieParser());
 
+  const corsOrigins = appConfig.corsOrigins.length > 0
+    ? appConfig.corsOrigins
+    : appConfig.frontendUrl;
+
+  if (appConfig.nodeEnv === 'production' && appConfig.corsOrigins.length === 0) {
+    logger.warn('CORS_ORIGINS not configured — falling back to FRONTEND_URL');
+  }
+
   app.enableCors({
-    origin: appConfig.corsOrigins.length > 0
-      ? appConfig.corsOrigins
-      : appConfig.frontendUrl,
+    origin: corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Service-Key'],
+    maxAge: 86400,
   });
 
   app.useGlobalPipes(
@@ -55,22 +70,24 @@ async function bootstrap() {
     new TransformInterceptor(),
   );
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('GearDockGH API')
-    .setDescription('E-commerce API for GearDockGH — premium gear for Ghana')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
+  if (appConfig.nodeEnv !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('GearDockGH API')
+      .setDescription('E-commerce API for GearDockGH — premium gear for Ghana')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document);
+    logger.log(`Swagger docs available at http://localhost:${appConfig.port}/api/docs`);
+  }
 
   app.enableShutdownHooks();
 
   const port = appConfig.port;
   await app.listen(port);
   logger.log(`GearDockGH API running on port ${port}`);
-  logger.log(`Swagger docs available at http://localhost:${port}/api/docs`);
 }
 
 bootstrap().catch((err) => {

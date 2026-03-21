@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import { EventsService } from '../../events/services/events.service.js';
+import { validateExternalUrl } from '../../../core/utils/url-validator.js';
 
 interface ImportBrainProduct {
   id: string;
@@ -97,8 +98,10 @@ export class ImportBrainSyncPullService {
     apiKey: string,
     page: number,
   ): Promise<ImportBrainProduct[]> {
+    const url = `${apiUrl}/platform/products?page=${page}&limit=100`;
+    validateExternalUrl(url);
     const response = await fetch(
-      `${apiUrl}/platform/products?page=${page}&limit=100`,
+      url,
       {
         headers: {
           'X-API-Key': apiKey,

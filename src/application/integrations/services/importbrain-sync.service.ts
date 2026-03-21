@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
+import { validateExternalUrl } from '../../../core/utils/url-validator.js';
 
 @Injectable()
 export class ImportBrainSyncService {
@@ -66,9 +67,11 @@ export class ImportBrainSyncService {
       };
     }
 
+    const orderUrl = `${connection.apiUrl}/platform/orders`;
+    validateExternalUrl(orderUrl);
     try {
       const response = await fetch(
-        `${connection.apiUrl}/platform/orders`,
+        orderUrl,
         {
           method: 'POST',
           headers: {
@@ -109,9 +112,11 @@ export class ImportBrainSyncService {
       return;
     }
 
+    const customerUrl = `${connection.apiUrl}/platform/customers`;
+    validateExternalUrl(customerUrl);
     try {
       const response = await fetch(
-        `${connection.apiUrl}/platform/customers`,
+        customerUrl,
         {
           method: 'POST',
           headers: {

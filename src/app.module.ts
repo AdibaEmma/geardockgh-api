@@ -1,5 +1,6 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { appConfig } from './infrastructure/config/app.config.js';
 import { DatabaseModule } from './infrastructure/database/database.module.js';
 import { TenantMiddleware } from './infrastructure/tenant/tenant.middleware.js';
@@ -24,6 +25,10 @@ import { UploadsModule } from './presentation/modules/uploads.module.js';
       isGlobal: true,
       load: [appConfig],
     }),
+    ThrottlerModule.forRoot([
+      { name: 'short', ttl: 1000, limit: 10 },
+      { name: 'long', ttl: 60000, limit: 60 },
+    ]),
     DatabaseModule,
     HealthModule,
     AuthModule,
