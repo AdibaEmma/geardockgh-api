@@ -107,4 +107,12 @@ export class CreateProductDto {
   @IsInt()
   @Min(0)
   preorderSlotTarget?: number;
+
+  @ApiPropertyOptional({
+    example: '[{"name":"Color","type":"color","values":[{"label":"Black","hex":"#000000"}]}]',
+    description: 'JSON string of product option groups',
+  })
+  @IsOptional()
+  @IsString()
+  optionsJson?: string;
 }

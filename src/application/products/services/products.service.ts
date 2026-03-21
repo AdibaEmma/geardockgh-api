@@ -33,6 +33,7 @@ export class ProductsService {
         category: dto.category,
         imagesJson: dto.imagesJson,
         specsJson: dto.specsJson,
+        optionsJson: dto.optionsJson,
         preorderSlotTarget: dto.preorderSlotTarget ?? 0,
       },
       include: { variants: true },
@@ -307,6 +308,7 @@ export class ProductsService {
     preorderSlotTarget: 'Slot Target',
     imagesJson: 'Images',
     specsJson: 'Specs',
+    optionsJson: 'Options',
   };
 
   private diffChanges(

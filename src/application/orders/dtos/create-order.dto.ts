@@ -25,6 +25,14 @@ export class OrderItemDto {
   @IsInt()
   @Min(1)
   quantity!: number;
+
+  @ApiPropertyOptional({
+    example: '[{"name":"Color","value":"Black"},{"name":"Size","value":"1.4m","priceDelta":5000}]',
+    description: 'JSON string of selected product options',
+  })
+  @IsOptional()
+  @IsString()
+  selectedOptions?: string;
 }
 
 export class CreateOrderDto {

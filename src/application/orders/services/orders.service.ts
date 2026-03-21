@@ -39,6 +39,7 @@ export class OrdersService {
       variantId: string | null;
       quantity: number;
       unitPricePesewas: number;
+      selectedOptionsJson: string | null;
     }[] = [];
 
     for (const item of dto.items) {
@@ -71,6 +72,7 @@ export class OrdersService {
         variantId: item.variantId ?? null,
         quantity: item.quantity,
         unitPricePesewas: unitPrice,
+        selectedOptionsJson: item.selectedOptions ?? null,
       });
     }
 

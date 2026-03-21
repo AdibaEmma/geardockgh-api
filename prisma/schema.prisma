@@ -147,6 +147,7 @@ model Product {
   category              String?
   imagesJson           String? @map("images_json") @db.Text
   specsJson            String? @map("specs_json") @db.Text
+  optionsJson          String? @map("options_json") @db.Text
 
   variants   ProductVariant[]
   orderItems OrderItem[]
@@ -222,8 +223,9 @@ model OrderItem {
   product         Product         @relation(fields: [productId], references: [id])
   variantId       String?         @map("variant_id")
   variant         ProductVariant? @relation(fields: [variantId], references: [id])
-  quantity        Int
-  unitPricePesewas Int            @map("unit_price_pesewas")
+  quantity             Int
+  unitPricePesewas     Int     @map("unit_price_pesewas")
+  selectedOptionsJson  String? @map("selected_options_json") @db.Text
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -247,6 +249,7 @@ model Preorder {
   balancePesewas           Int            @map("balance_pesewas")
   paystackBalanceReference String?        @map("paystack_balance_reference")
   estArrivalDate           DateTime?      @map("est_arrival_date")
+  selectedOptionsJson  String?        @map("selected_options_json") @db.Text
   status          PreorderStatus @default(RESERVED)
   notes           String?
 

@@ -12,6 +12,14 @@ export class CreatePreorderDto {
   @Min(1)
   quantity!: number;
 
+  @ApiPropertyOptional({
+    example: '[{"name":"Color","value":"Black"}]',
+    description: 'JSON string of selected product options',
+  })
+  @IsOptional()
+  @IsString()
+  selectedOptions?: string;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

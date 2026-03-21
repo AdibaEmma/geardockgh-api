@@ -56,6 +56,7 @@ export class PreordersService {
           balancePesewas,
           totalPesewas,
           estArrivalDate: product.estArrivalDate,
+          selectedOptionsJson: dto.selectedOptions ?? null,
           status: PreorderStatus.RESERVED,
           notes: dto.notes,
         },
