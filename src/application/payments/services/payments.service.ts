@@ -56,28 +56,20 @@ export class PaymentsService {
       },
     });
 
-    if (dto.provider === 'PAYSTACK') {
-      const paystackResponse = await this.initializePaystack({
-        email: order.customer.email,
-        amount: order.totalPesewas,
-        reference,
-        callbackUrl: dto.callbackUrl,
-      });
+    const channels = this.getPaystackChannels(dto.provider);
+    const paystackResponse = await this.initializePaystack({
+      email: order.customer.email,
+      amount: order.totalPesewas,
+      reference,
+      callbackUrl: dto.callbackUrl,
+      channels,
+    });
 
-      return {
-        paymentId: payment.id,
-        reference,
-        authorizationUrl: paystackResponse.authorization_url,
-        accessCode: paystackResponse.access_code,
-      };
-    }
-
-    // For MOMO / BANK_TRANSFER, return reference for manual verification
     return {
       paymentId: payment.id,
       reference,
-      provider: dto.provider,
-      amountPesewas: order.totalPesewas,
+      authorizationUrl: paystackResponse.authorization_url,
+      accessCode: paystackResponse.access_code,
     };
   }
 
@@ -114,27 +106,20 @@ export class PaymentsService {
       },
     });
 
-    if (provider === 'PAYSTACK') {
-      const paystackResponse = await this.initializePaystack({
-        email: preorder.customer.email,
-        amount: preorder.depositPesewas,
-        reference,
-        callbackUrl,
-      });
-
-      return {
-        paymentId: payment.id,
-        reference,
-        authorizationUrl: paystackResponse.authorization_url,
-        accessCode: paystackResponse.access_code,
-      };
-    }
+    const channels = this.getPaystackChannels(provider);
+    const paystackResponse = await this.initializePaystack({
+      email: preorder.customer.email,
+      amount: preorder.depositPesewas,
+      reference,
+      callbackUrl,
+      channels,
+    });
 
     return {
       paymentId: payment.id,
       reference,
-      provider,
-      amountPesewas: preorder.depositPesewas,
+      authorizationUrl: paystackResponse.authorization_url,
+      accessCode: paystackResponse.access_code,
     };
   }
 
@@ -171,27 +156,20 @@ export class PaymentsService {
       },
     });
 
-    if (provider === 'PAYSTACK') {
-      const paystackResponse = await this.initializePaystack({
-        email: preorder.customer.email,
-        amount: preorder.balancePesewas,
-        reference,
-        callbackUrl,
-      });
-
-      return {
-        paymentId: payment.id,
-        reference,
-        authorizationUrl: paystackResponse.authorization_url,
-        accessCode: paystackResponse.access_code,
-      };
-    }
+    const channels = this.getPaystackChannels(provider);
+    const paystackResponse = await this.initializePaystack({
+      email: preorder.customer.email,
+      amount: preorder.balancePesewas,
+      reference,
+      callbackUrl,
+      channels,
+    });
 
     return {
       paymentId: payment.id,
       reference,
-      provider,
-      amountPesewas: preorder.balancePesewas,
+      authorizationUrl: paystackResponse.authorization_url,
+      accessCode: paystackResponse.access_code,
     };
   }
 
@@ -213,20 +191,19 @@ export class PaymentsService {
       return payment;
     }
 
-    if (payment.provider === 'PAYSTACK') {
-      const verification = await this.verifyPaystack(reference);
+    // All payment methods (card, MoMo, bank transfer) are processed via Paystack
+    const verification = await this.verifyPaystack(reference);
 
-      if (verification.status === 'success') {
-        return this.confirmPayment(payment.id, verification.id.toString());
-      }
+    if (verification.status === 'success') {
+      return this.confirmPayment(payment.id, verification.id.toString());
+    }
 
-      if (verification.status === 'failed') {
-        await this.prisma.payment.update({
-          where: { id: payment.id },
-          data: { status: PaymentStatus.FAILED },
-        });
-        throw new BadRequestException('Payment failed');
-      }
+    if (verification.status === 'failed') {
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: PaymentStatus.FAILED },
+      });
+      throw new BadRequestException('Payment failed');
     }
 
     return payment;
@@ -290,12 +267,39 @@ export class PaymentsService {
     });
   }
 
+  private getPaystackChannels(
+    provider: 'PAYSTACK' | 'MOMO' | 'BANK_TRANSFER',
+  ): string[] {
+    switch (provider) {
+      case 'MOMO':
+        return ['mobile_money'];
+      case 'BANK_TRANSFER':
+        return ['bank_transfer'];
+      case 'PAYSTACK':
+      default:
+        return ['card'];
+    }
+  }
+
   private async initializePaystack(params: {
     email: string;
     amount: number;
     reference: string;
     callbackUrl?: string;
+    channels?: string[];
   }) {
+    const payload: Record<string, unknown> = {
+      email: params.email,
+      amount: params.amount,
+      reference: params.reference,
+      callback_url: params.callbackUrl,
+      currency: 'GHS',
+    };
+
+    if (params.channels?.length) {
+      payload.channels = params.channels;
+    }
+
     const response = await fetch(
       `${this.paystackBaseUrl}/transaction/initialize`,
       {
@@ -304,13 +308,7 @@ export class PaymentsService {
           Authorization: `Bearer ${this.paystackSecretKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email: params.email,
-          amount: params.amount,
-          reference: params.reference,
-          callback_url: params.callbackUrl,
-          currency: 'GHS',
-        }),
+        body: JSON.stringify(payload),
       },
     );
 
