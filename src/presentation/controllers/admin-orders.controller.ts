@@ -15,6 +15,7 @@ import {
 import { OrdersService } from '../../application/orders/services/orders.service.js';
 import { OrderQueryDto } from '../../application/orders/dtos/order-query.dto.js';
 import { UpdateOrderDto } from '../../application/orders/dtos/update-order.dto.js';
+import { BulkUpdateOrdersDto } from '../../application/orders/dtos/bulk-update-orders.dto.js';
 import { JwtAuthGuard } from '../../infrastructure/auth/jwt-auth.guard.js';
 import { RolesGuard } from '../../infrastructure/auth/roles.guard.js';
 import { Roles } from '../../infrastructure/auth/roles.decorator.js';
@@ -37,6 +38,15 @@ export class AdminOrdersController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.ordersService.findAllAdmin(query, user.tenantId);
+  }
+
+  @Patch('bulk-status')
+  @ApiOperation({ summary: 'Bulk update order statuses (admin)' })
+  async bulkUpdateStatus(
+    @Body() dto: BulkUpdateOrdersDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.ordersService.bulkUpdateStatus(dto, user.tenantId);
   }
 
   @Get(':id')

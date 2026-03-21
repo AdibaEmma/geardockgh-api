@@ -264,6 +264,22 @@ export class OrdersService {
     return order;
   }
 
+  async bulkUpdateStatus(
+    dto: { orderIds: string[]; status: OrderStatus },
+    tenantId: string,
+  ) {
+    const result = await this.prisma.order.updateMany({
+      where: {
+        id: { in: dto.orderIds },
+        tenantId,
+        deletedAt: null,
+      },
+      data: { status: dto.status },
+    });
+
+    return { updatedCount: result.count };
+  }
+
   async update(id: string, dto: UpdateOrderDto, tenantId: string) {
     const order = await this.prisma.order.findFirst({
       where: { id, tenantId, deletedAt: null },
