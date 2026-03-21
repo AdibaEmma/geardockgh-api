@@ -69,7 +69,7 @@ export class AdminProductsController {
     @Body() dto: CreateProductDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.productsService.create(dto, user.tenantId);
+    return this.productsService.create(dto, user.tenantId, user.userId);
   }
 
   @Patch(':id/toggle-publish')
@@ -79,7 +79,7 @@ export class AdminProductsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     const product = await this.productsService.findById(id, user.tenantId);
-    return this.productsService.update(id, { isPublished: !product.isPublished }, user.tenantId);
+    return this.productsService.update(id, { isPublished: !product.isPublished }, user.tenantId, user.userId);
   }
 
   @Patch(':id/toggle-featured')
@@ -89,7 +89,16 @@ export class AdminProductsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     const product = await this.productsService.findById(id, user.tenantId);
-    return this.productsService.update(id, { isFeatured: !product.isFeatured }, user.tenantId);
+    return this.productsService.update(id, { isFeatured: !product.isFeatured }, user.tenantId, user.userId);
+  }
+
+  @Get(':id/audit-logs')
+  @ApiOperation({ summary: 'Get product audit trail (admin)' })
+  async getAuditLogs(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.productsService.getAuditLogs(id, user.tenantId);
   }
 
   @Patch(':id')
@@ -99,7 +108,7 @@ export class AdminProductsController {
     @Body() dto: UpdateProductDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.productsService.update(id, dto, user.tenantId);
+    return this.productsService.update(id, dto, user.tenantId, user.userId);
   }
 
   @Delete(':id')
@@ -108,6 +117,6 @@ export class AdminProductsController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.productsService.remove(id, user.tenantId);
+    return this.productsService.remove(id, user.tenantId, user.userId);
   }
 }

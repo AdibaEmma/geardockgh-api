@@ -95,4 +95,10 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   specsJson?: string;
+
+  @ApiPropertyOptional({ example: 0, description: 'Max pre-order slots for this product (0 = unlimited)' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  preorderSlotTarget?: number;
 }

@@ -133,6 +133,7 @@ model Product {
   description          String?
   pricePesewas         Int     @map("price_pesewas")
   comparePricePesewas  Int?    @map("compare_price_pesewas")
+  costPricePesewas     Int?    @map("cost_price_pesewas")
   stockCount           Int     @default(0) @map("stock_count")
   isPreorder           Boolean @default(false) @map("is_preorder")
   isPublished          Boolean @default(false) @map("is_published")
@@ -142,6 +143,7 @@ model Product {
   preorderDepositValue  Int?      @map("preorder_deposit_value")
   preorderMinUnits      Int?      @map("preorder_min_units")
   preorderSlotsTaken    Int       @default(0) @map("preorder_slots_taken")
+  preorderSlotTarget    Int?      @map("preorder_slot_target")
   category              String?
   imagesJson           String? @map("images_json") @db.Text
   specsJson            String? @map("specs_json") @db.Text
@@ -149,6 +151,7 @@ model Product {
   variants   ProductVariant[]
   orderItems OrderItem[]
   preorders  Preorder[]
+  auditLogs  ProductAuditLog[]
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -365,4 +368,24 @@ model NotificationLog {
   @@index([preorderId])
   @@index([status])
   @@map("notification_logs")
+}
+
+// ─── PRODUCT AUDIT LOG ─────────────────────────────────────────
+
+model ProductAuditLog {
+  id        String   @id @default(uuid())
+  tenantId  String   @map("tenant_id")
+  productId String   @map("product_id")
+  action    String   // 'created' | 'updated' | 'deleted' | 'published' | 'unpublished'
+  changes   String?  @db.Text // JSON array of { field, from, to }
+  userId    String?  @map("user_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([tenantId])
+  @@index([createdAt])
+  @@map("product_audit_logs")
 }

@@ -17,6 +17,7 @@ interface ImportBrainProduct {
   imagesJson?: string;
   currentSellingPrice: number | string;
   currentStock: number;
+  latestLandedCostPerUnit?: number | string;
   isActive: boolean;
 }
 
@@ -135,6 +136,12 @@ export class ImportBrainSyncPullService {
           ? parseFloat(product.currentSellingPrice)
           : product.currentSellingPrice,
       currentStock: product.currentStock,
+      latestLandedCostPerUnit:
+        product.latestLandedCostPerUnit !== undefined
+          ? typeof product.latestLandedCostPerUnit === 'string'
+            ? parseFloat(product.latestLandedCostPerUnit)
+            : product.latestLandedCostPerUnit
+          : undefined,
     };
 
     if (existing) {

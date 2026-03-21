@@ -168,6 +168,8 @@ export class EventsService {
     const name = (data.name as string) ?? 'Untitled Product';
     const sellingPrice = data.currentSellingPrice as number | undefined;
     const pricePesewas = sellingPrice ? Math.round(sellingPrice * 100) : 0;
+    const latestLandedCostPerUnit = data.latestLandedCostPerUnit as number | undefined;
+    const costPricePesewas = latestLandedCostPerUnit ? Math.round(latestLandedCostPerUnit * 100) : null;
     const stock = (data.currentStock as number) ?? 0;
     const slug = name
       .toLowerCase()
@@ -190,6 +192,7 @@ export class EventsService {
         slug: `${slug}-${Date.now()}`,
         description: (data.description as string) ?? null,
         pricePesewas,
+        costPricePesewas,
         stockCount: stock,
         category: (data.category as string) ?? null,
         imagesJson: productImagesJson,
@@ -249,6 +252,11 @@ export class EventsService {
       // If imageUrl is null, do NOT clear existing images (admin may have manually added them)
     }
     if (data.category !== undefined) updateData.category = data.category;
+
+    if (data.latestLandedCostPerUnit !== undefined) {
+      const lcpu = data.latestLandedCostPerUnit as number | null;
+      updateData.costPricePesewas = lcpu ? Math.round(lcpu * 100) : null;
+    }
 
     if (data.isPreorder !== undefined) updateData.isPreorder = data.isPreorder;
     if (data.estArrivalDate !== undefined) {

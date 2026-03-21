@@ -10,11 +10,11 @@ import type { PaginatedResult } from '../../../core/interfaces/pagination.interf
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateProductDto, tenantId: string) {
+  async create(dto: CreateProductDto, tenantId: string, userId?: string) {
     this.validateImagesJson(dto.imagesJson);
     const slug = this.generateSlug(dto.name);
 
-    return this.prisma.product.create({
+    const product = await this.prisma.product.create({
       data: {
         tenantId,
         name: dto.name,
@@ -33,9 +33,22 @@ export class ProductsService {
         category: dto.category,
         imagesJson: dto.imagesJson,
         specsJson: dto.specsJson,
+        preorderSlotTarget: dto.preorderSlotTarget ?? 0,
       },
       include: { variants: true },
     });
+
+    await this.prisma.productAuditLog.create({
+      data: {
+        tenantId,
+        productId: product.id,
+        action: 'created',
+        changes: JSON.stringify([{ field: 'name', label: 'Name', from: null, to: dto.name }]),
+        userId,
+      },
+    });
+
+    return product;
   }
 
   async findAll(
@@ -169,11 +182,11 @@ export class ProductsService {
     return product;
   }
 
-  async update(id: string, dto: UpdateProductDto, tenantId: string) {
+  async update(id: string, dto: UpdateProductDto, tenantId: string, userId?: string) {
     if (dto.imagesJson !== undefined) {
       this.validateImagesJson(dto.imagesJson);
     }
-    await this.findById(id, tenantId);
+    const existing = await this.findById(id, tenantId);
 
     const data: Prisma.ProductUpdateInput = { ...dto };
 
@@ -181,15 +194,56 @@ export class ProductsService {
       data.slug = this.generateSlug(dto.name);
     }
 
-    return this.prisma.product.update({
+    // Capture field-level changes for audit trail
+    const changes = this.diffChanges(existing as Record<string, unknown>, dto as unknown as Record<string, unknown>);
+
+    const updated = await this.prisma.product.update({
       where: { id },
       data,
       include: { variants: true },
     });
+
+    if (changes.length > 0) {
+      // Determine action type from the changes
+      let action = 'updated';
+      if (changes.length === 1 && changes[0].field === 'isPublished') {
+        action = changes[0].to === true ? 'published' : 'unpublished';
+      }
+
+      await this.prisma.productAuditLog.create({
+        data: {
+          tenantId,
+          productId: id,
+          action,
+          changes: JSON.stringify(changes),
+          userId,
+        },
+      });
+    }
+
+    return updated;
   }
 
-  async remove(id: string, tenantId: string) {
-    await this.findById(id, tenantId);
+  async getAuditLogs(productId: string, tenantId: string) {
+    return this.prisma.productAuditLog.findMany({
+      where: { productId, tenantId },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  }
+
+  async remove(id: string, tenantId: string, userId?: string) {
+    const product = await this.findById(id, tenantId);
+
+    await this.prisma.productAuditLog.create({
+      data: {
+        tenantId,
+        productId: id,
+        action: 'deleted',
+        changes: JSON.stringify([{ field: 'name', label: 'Name', from: product.name, to: null }]),
+        userId,
+      },
+    });
 
     return this.prisma.product.update({
       where: { id },
@@ -234,6 +288,61 @@ export class ProductsService {
         throw new BadRequestException('Each image must be a valid HTTPS URL');
       }
     }
+  }
+
+  private readonly FIELD_LABELS: Record<string, string> = {
+    name: 'Name',
+    description: 'Description',
+    pricePesewas: 'Price',
+    comparePricePesewas: 'Compare Price',
+    stockCount: 'Stock',
+    isPreorder: 'Pre-order',
+    isPublished: 'Published',
+    isFeatured: 'Featured',
+    category: 'Category',
+    estArrivalDate: 'ETA',
+    preorderDepositType: 'Deposit Type',
+    preorderDepositValue: 'Deposit Value',
+    preorderMinUnits: 'Min Units',
+    preorderSlotTarget: 'Slot Target',
+    imagesJson: 'Images',
+    specsJson: 'Specs',
+  };
+
+  private diffChanges(
+    existing: Record<string, unknown>,
+    dto: Record<string, unknown>,
+  ): Array<{ field: string; label: string; from: unknown; to: unknown }> {
+    const changes: Array<{ field: string; label: string; from: unknown; to: unknown }> = [];
+
+    for (const [key, newValue] of Object.entries(dto)) {
+      if (newValue === undefined) continue;
+
+      const oldValue = existing[key];
+
+      // Normalize for comparison
+      const oldNorm = oldValue instanceof Date ? oldValue.toISOString() : oldValue;
+      const newNorm = key === 'estArrivalDate' && typeof newValue === 'string'
+        ? new Date(newValue).toISOString()
+        : newValue;
+
+      // Skip if values are the same (handle null vs undefined)
+      if (oldNorm === newNorm) continue;
+      if (oldNorm == null && newNorm == null) continue;
+
+      // For numeric fields stored as Prisma Decimals, compare as numbers
+      const oldNum = typeof oldNorm === 'object' && oldNorm !== null ? Number(oldNorm) : oldNorm;
+      if (oldNum === newNorm) continue;
+
+      changes.push({
+        field: key,
+        label: this.FIELD_LABELS[key] ?? key,
+        from: oldNum ?? null,
+        to: newValue,
+      });
+    }
+
+    return changes;
   }
 
   private generateSlug(name: string): string {
