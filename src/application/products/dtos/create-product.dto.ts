@@ -32,6 +32,12 @@ export class CreateProductDto {
   @Min(0)
   comparePricePesewas?: number;
 
+  @ApiPropertyOptional({ example: 93826, description: 'Cost price in pesewas' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  costPricePesewas?: number;
+
   @ApiPropertyOptional({ example: 10 })
   @IsOptional()
   @IsInt()
