@@ -79,6 +79,46 @@ export class NotificationService {
     }
   }
 
+  async sendStockAvailableNotification(params: {
+    tenantId: string;
+    customerId: string;
+    email: string;
+    phone?: string;
+    customerName: string;
+    productName: string;
+    productSlug: string;
+  }): Promise<void> {
+    await this.enqueueNotification({
+      type: 'send-stock-available',
+      tenantId: params.tenantId,
+      customerId: params.customerId,
+      channel: 'email',
+      recipient: params.email,
+      templateName: 'stock-available',
+      payload: {
+        customerName: params.customerName,
+        productName: params.productName,
+        productSlug: params.productSlug,
+      },
+    });
+
+    if (params.phone) {
+      await this.enqueueNotification({
+        type: 'send-stock-available',
+        tenantId: params.tenantId,
+        customerId: params.customerId,
+        channel: 'sms',
+        recipient: params.phone,
+        templateName: 'stock-available',
+        payload: {
+          customerName: params.customerName,
+          productName: params.productName,
+          productSlug: params.productSlug,
+        },
+      });
+    }
+  }
+
   async sendBalanceRequest(params: {
     tenantId: string;
     customerId: string;

@@ -72,10 +72,11 @@ model Customer {
   momoNumber   String?      @map("momo_number")
   isActive    Boolean      @default(true) @map("is_active")
 
-  orders        Order[]
-  preorders     Preorder[]
-  addresses     Address[]
-  refreshTokens RefreshToken[]
+  orders             Order[]
+  preorders          Preorder[]
+  addresses          Address[]
+  refreshTokens      RefreshToken[]
+  stockNotifications StockNotification[]
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -149,10 +150,11 @@ model Product {
   specsJson            String? @map("specs_json") @db.Text
   optionsJson          String? @map("options_json") @db.Text
 
-  variants   ProductVariant[]
-  orderItems OrderItem[]
-  preorders  Preorder[]
-  auditLogs  ProductAuditLog[]
+  variants           ProductVariant[]
+  orderItems         OrderItem[]
+  preorders          Preorder[]
+  auditLogs          ProductAuditLog[]
+  stockNotifications StockNotification[]
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -391,4 +393,23 @@ model ProductAuditLog {
   @@index([tenantId])
   @@index([createdAt])
   @@map("product_audit_logs")
+}
+
+// ─── STOCK NOTIFICATION ───────────────────────────────────────
+
+model StockNotification {
+  id         String    @id @default(uuid())
+  tenantId   String    @map("tenant_id")
+  productId  String    @map("product_id")
+  customerId String    @map("customer_id")
+  notifiedAt DateTime? @map("notified_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, customerId])
+  @@index([tenantId])
+  @@index([productId])
+  @@map("stock_notifications")
 }

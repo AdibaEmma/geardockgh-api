@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
+import { StockNotificationService } from '../../notifications/services/stock-notification.service.js';
 import type { CreateProductDto } from '../dtos/create-product.dto.js';
 import type { UpdateProductDto } from '../dtos/update-product.dto.js';
 import type { ProductQueryDto } from '../dtos/product-query.dto.js';
@@ -8,7 +9,10 @@ import type { PaginatedResult } from '../../../core/interfaces/pagination.interf
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly stockNotificationService: StockNotificationService,
+  ) {}
 
   async create(dto: CreateProductDto, tenantId: string, userId?: string) {
     this.validateImagesJson(dto.imagesJson);
@@ -198,11 +202,20 @@ export class ProductsService {
     // Capture field-level changes for audit trail
     const changes = this.diffChanges(existing as Record<string, unknown>, dto as unknown as Record<string, unknown>);
 
+    const wasOutOfStock = existing.stockCount === 0;
+
     const updated = await this.prisma.product.update({
       where: { id },
       data,
       include: { variants: true },
     });
+
+    // Auto-notify subscribers when restocked
+    if (wasOutOfStock && updated.stockCount > 0) {
+      this.stockNotificationService
+        .notifySubscribers(id, tenantId)
+        .catch(() => {}); // fire-and-forget
+    }
 
     if (changes.length > 0) {
       // Determine action type from the changes

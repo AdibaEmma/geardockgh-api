@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 
 export interface NotificationJobData {
-  type: 'send-preorder-confirmation' | 'send-balance-request' | 'send-delivery-confirmation';
+  type: 'send-preorder-confirmation' | 'send-balance-request' | 'send-delivery-confirmation' | 'send-stock-available';
   tenantId: string;
   customerId: string;
   channel: 'whatsapp' | 'sms' | 'email';
