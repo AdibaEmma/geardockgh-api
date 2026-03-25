@@ -155,6 +155,7 @@ model Product {
   preorders          Preorder[]
   auditLogs          ProductAuditLog[]
   stockNotifications StockNotification[]
+  bundleItems        BundleItem[]
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -393,6 +394,132 @@ model ProductAuditLog {
   @@index([tenantId])
   @@index([createdAt])
   @@map("product_audit_logs")
+}
+
+// ─── BUNDLE ──────────────────────────────────────────────────
+
+model Bundle {
+  id                String   @id @default(uuid())
+  tenantId          String   @map("tenant_id")
+  name              String
+  slug              String
+  tagline           String?
+  description       String?
+  pricePesewas      Int      @map("price_pesewas")
+  comparePricePesewas Int?   @map("compare_price_pesewas")
+  isPublished       Boolean  @default(false) @map("is_published")
+  isFeatured        Boolean  @default(false) @map("is_featured")
+  isPreorder        Boolean  @default(false) @map("is_preorder")
+  stockCount        Int      @default(0) @map("stock_count")
+  imageUrl          String?  @map("image_url")
+  category          String?
+
+  items BundleItem[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@unique([slug, tenantId])
+  @@index([tenantId])
+  @@index([isPublished])
+  @@index([isFeatured])
+  @@map("bundles")
+}
+
+model BundleItem {
+  id           String  @id @default(uuid())
+  bundleId     String  @map("bundle_id")
+  bundle       Bundle  @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  productId    String  @map("product_id")
+  product      Product @relation(fields: [productId], references: [id])
+  quantity     Int     @default(1)
+  isBonus      Boolean @default(false) @map("is_bonus")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([bundleId])
+  @@index([productId])
+  @@map("bundle_items")
+}
+
+// ─── NEWSLETTER SUBSCRIBER ────────────────────────────────────
+
+model NewsletterSubscriber {
+  id           String    @id @default(uuid())
+  tenantId     String    @map("tenant_id")
+  email        String
+  source       String    @default("website") // 'website' | 'preorder' | 'checkout'
+  isActive     Boolean   @default(true) @map("is_active")
+  subscribedAt DateTime  @default(now()) @map("subscribed_at")
+  unsubscribedAt DateTime? @map("unsubscribed_at")
+
+  @@unique([email, tenantId])
+  @@index([tenantId])
+  @@index([isActive])
+  @@map("newsletter_subscribers")
+}
+
+// ─── EMAIL SEQUENCE ──────────────────────────────────────────
+
+enum EmailSequenceStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+model EmailSequence {
+  id          String              @id @default(uuid())
+  tenantId    String              @map("tenant_id")
+  name        String
+  description String?
+  status      EmailSequenceStatus @default(ACTIVE)
+
+  steps       EmailSequenceStep[]
+  enrollments EmailSequenceEnrollment[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@index([status])
+  @@map("email_sequences")
+}
+
+model EmailSequenceStep {
+  id         String        @id @default(uuid())
+  sequenceId String        @map("sequence_id")
+  sequence   EmailSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  stepOrder  Int           @map("step_order")
+  delayHours Int           @map("delay_hours")
+  subject    String
+  htmlBody   String        @map("html_body") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([sequenceId])
+  @@map("email_sequence_steps")
+}
+
+model EmailSequenceEnrollment {
+  id                String        @id @default(uuid())
+  sequenceId        String        @map("sequence_id")
+  sequence          EmailSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  subscriberId      String        @map("subscriber_id")
+  email             String
+  currentStepOrder  Int           @default(0) @map("current_step_order")
+  nextSendAt        DateTime?     @map("next_send_at")
+  isComplete        Boolean       @default(false) @map("is_complete")
+  cancelledAt       DateTime?     @map("cancelled_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([sequenceId, email])
+  @@index([nextSendAt])
+  @@index([isComplete])
+  @@map("email_sequence_enrollments")
 }
 
 // ─── STOCK NOTIFICATION ───────────────────────────────────────

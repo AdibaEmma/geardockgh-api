@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import type { AppConfiguration } from '../config/app.config.js';
 import { NotificationProcessor } from './processors/notification.processor.js';
 import { PreorderEventProcessor } from './processors/preorder-event.processor.js';
+import { EmailSequenceProcessor } from './processors/email-sequence.processor.js';
 
 const logger = new Logger('QueueModule');
 
@@ -38,9 +39,10 @@ export class QueueModule {
         BullModule.registerQueue(
           { name: 'notifications' },
           { name: 'preorder-events' },
+          { name: 'email-sequences' },
         ),
       ],
-      providers: [NotificationProcessor, PreorderEventProcessor],
+      providers: [NotificationProcessor, PreorderEventProcessor, EmailSequenceProcessor],
       exports: [BullModule],
     };
   }

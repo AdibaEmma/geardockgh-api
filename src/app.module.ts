@@ -18,6 +18,9 @@ import { QueueModule } from './infrastructure/queue/queue.module.js';
 import { NotificationsModule } from './application/notifications/notifications.module.js';
 import { PreordersModule } from './presentation/modules/preorders.module.js';
 import { UploadsModule } from './presentation/modules/uploads.module.js';
+import { NewsletterModule } from './presentation/modules/newsletter.module.js';
+import { BundlesModule } from './presentation/modules/bundles.module.js';
+import { EmailSequencesModule } from './presentation/modules/email-sequences.module.js';
 
 @Module({
   imports: [
@@ -44,6 +47,9 @@ import { UploadsModule } from './presentation/modules/uploads.module.js';
     NotificationsModule,
     PreordersModule,
     UploadsModule,
+    NewsletterModule,
+    BundlesModule,
+    EmailSequencesModule,
   ],
   controllers: [],
   providers: [],
