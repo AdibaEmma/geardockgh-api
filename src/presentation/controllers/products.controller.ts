@@ -49,6 +49,12 @@ export class ProductsController {
     return this.productsService.findFeatured(tenantId);
   }
 
+  @Get('new-arrivals')
+  @ApiOperation({ summary: 'Get products added within the last 7 days (public)' })
+  async findNewArrivals(@TenantId() tenantId: string) {
+    return this.productsService.findNewArrivals(tenantId);
+  }
+
   @Get('flash-deal')
   @ApiOperation({ summary: 'Get the current flash deal product (public)' })
   async findFlashDeal(@TenantId() tenantId: string) {

@@ -280,6 +280,23 @@ export class ProductsService {
     });
   }
 
+  async findNewArrivals(tenantId: string, limit = 8) {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    return this.prisma.product.findMany({
+      where: {
+        tenantId,
+        isPublished: true,
+        deletedAt: null,
+        createdAt: { gte: sevenDaysAgo },
+      },
+      include: { variants: true },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+  }
+
   async findFlashDeal(tenantId: string) {
     return this.prisma.product.findFirst({
       where: {
