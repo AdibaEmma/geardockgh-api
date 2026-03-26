@@ -5,6 +5,7 @@ import type { AppConfiguration } from '../config/app.config.js';
 import { NotificationProcessor } from './processors/notification.processor.js';
 import { PreorderEventProcessor } from './processors/preorder-event.processor.js';
 import { EmailSequenceProcessor } from './processors/email-sequence.processor.js';
+import { ResendEmailService } from '../../application/notifications/services/resend-email.service.js';
 
 const logger = new Logger('QueueModule');
 
@@ -42,7 +43,7 @@ export class QueueModule {
           { name: 'email-sequences' },
         ),
       ],
-      providers: [NotificationProcessor, PreorderEventProcessor, EmailSequenceProcessor],
+      providers: [NotificationProcessor, PreorderEventProcessor, EmailSequenceProcessor, ResendEmailService],
       exports: [BullModule],
     };
   }
