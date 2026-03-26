@@ -49,6 +49,12 @@ export class ProductsController {
     return this.productsService.findFeatured(tenantId);
   }
 
+  @Get('flash-deal')
+  @ApiOperation({ summary: 'Get the current flash deal product (public)' })
+  async findFlashDeal(@TenantId() tenantId: string) {
+    return this.productsService.findFlashDeal(tenantId);
+  }
+
   @Get(':slug')
   @ApiOperation({ summary: 'Get a product by slug (public)' })
   async findBySlug(

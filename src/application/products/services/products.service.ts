@@ -34,6 +34,7 @@ export class ProductsService {
         estArrivalDate: dto.estArrivalDate ? new Date(dto.estArrivalDate) : undefined,
         isPublished: dto.isPublished ?? false,
         isFeatured: dto.isFeatured ?? false,
+        isFlashDeal: dto.isFlashDeal ?? false,
         category: dto.category,
         imagesJson: dto.imagesJson,
         specsJson: dto.specsJson,
@@ -279,6 +280,32 @@ export class ProductsService {
     });
   }
 
+  async findFlashDeal(tenantId: string) {
+    return this.prisma.product.findFirst({
+      where: {
+        tenantId,
+        isPublished: true,
+        isFlashDeal: true,
+        deletedAt: null,
+      },
+      include: { variants: true },
+    });
+  }
+
+  async toggleFlashDeal(id: string, tenantId: string, userId?: string) {
+    const product = await this.findById(id, tenantId);
+    const newValue = !product.isFlashDeal;
+
+    if (newValue) {
+      await this.prisma.product.updateMany({
+        where: { tenantId, isFlashDeal: true, id: { not: id } },
+        data: { isFlashDeal: false },
+      });
+    }
+
+    return this.update(id, { isFlashDeal: newValue }, tenantId, userId);
+  }
+
   private validateImagesJson(imagesJson?: string | null): void {
     if (!imagesJson) return;
 
@@ -313,6 +340,7 @@ export class ProductsService {
     isPreorder: 'Pre-order',
     isPublished: 'Published',
     isFeatured: 'Featured',
+    isFlashDeal: 'Flash Deal',
     category: 'Category',
     estArrivalDate: 'ETA',
     preorderDepositType: 'Deposit Type',

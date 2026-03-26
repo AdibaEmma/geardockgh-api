@@ -81,6 +81,11 @@ export class CreateProductDto {
   @IsBoolean()
   isFeatured?: boolean;
 
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  isFlashDeal?: boolean;
+
   @ApiPropertyOptional({ example: 'Laptops' })
   @IsOptional()
   @IsString()

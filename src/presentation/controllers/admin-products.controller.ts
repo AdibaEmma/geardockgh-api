@@ -92,6 +92,15 @@ export class AdminProductsController {
     return this.productsService.update(id, { isFeatured: !product.isFeatured }, user.tenantId, user.userId);
   }
 
+  @Patch(':id/toggle-flash-deal')
+  @ApiOperation({ summary: 'Toggle product flash deal status (admin)' })
+  async toggleFlashDeal(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.productsService.toggleFlashDeal(id, user.tenantId, user.userId);
+  }
+
   @Get(':id/audit-logs')
   @ApiOperation({ summary: 'Get product audit trail (admin)' })
   async getAuditLogs(
