@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
@@ -6,11 +6,19 @@ import { PrismaService } from '../../../infrastructure/database/prisma.service.j
 @Injectable()
 export class EmailSequenceService {
   private readonly logger = new Logger(EmailSequenceService.name);
+  private readonly sequenceQueue: Queue | null;
 
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue('email-sequences') private readonly sequenceQueue: Queue,
-  ) {}
+    @Optional() @InjectQueue('email-sequences') sequenceQueue?: Queue,
+  ) {
+    this.sequenceQueue = sequenceQueue ?? null;
+    if (!this.sequenceQueue) {
+      this.logger.warn(
+        'Email sequences queue not available — sequence processing will be logged only',
+      );
+    }
+  }
 
   async createSequence(
     tenantId: string,
@@ -86,6 +94,11 @@ export class EmailSequenceService {
   }
 
   async scheduleProcessing() {
+    if (!this.sequenceQueue) {
+      this.logger.warn('[DRY RUN] Email sequence processing not scheduled — queue unavailable');
+      return;
+    }
+
     await this.sequenceQueue.add(
       'process-pending-steps',
       { type: 'process-pending-steps' },
