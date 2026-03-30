@@ -28,8 +28,11 @@ export class ProductResponseDto {
   @ApiProperty({ example: true })
   isPublished!: boolean;
 
-  @ApiPropertyOptional({ example: 'Laptops' })
+  @ApiPropertyOptional({ example: 'computing' })
   category?: string;
+
+  @ApiPropertyOptional({ example: 'laptops' })
+  subcategory?: string;
 
   @ApiPropertyOptional({ example: 'AIR', description: 'AIR or SEA shipping method for pre-orders' })
   shippingMethod?: string;

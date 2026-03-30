@@ -8,10 +8,15 @@ export class ProductQueryDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ example: 'Laptops' })
+  @ApiPropertyOptional({ example: 'audio,computing', description: 'Comma-separated category slugs' })
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({ example: 'headphones', description: 'Subcategory slug' })
+  @IsOptional()
+  @IsString()
+  subcategory?: string;
 
   @ApiPropertyOptional({ example: 'true', description: 'Filter by pre-order status: "true" or "false"' })
   @IsOptional()

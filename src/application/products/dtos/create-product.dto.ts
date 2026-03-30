@@ -87,10 +87,15 @@ export class CreateProductDto {
   @IsBoolean()
   isFlashDeal?: boolean;
 
-  @ApiPropertyOptional({ example: 'Laptops' })
+  @ApiPropertyOptional({ example: 'computing' })
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({ example: 'laptops' })
+  @IsOptional()
+  @IsString()
+  subcategory?: string;
 
   @ApiPropertyOptional({
     example: '["https://cdn.example.com/img1.jpg"]',

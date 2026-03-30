@@ -36,6 +36,7 @@ export class ProductsService {
         isFeatured: dto.isFeatured ?? false,
         isFlashDeal: dto.isFlashDeal ?? false,
         category: dto.category,
+        subcategory: dto.subcategory,
         imagesJson: dto.imagesJson,
         specsJson: dto.specsJson,
         optionsJson: dto.optionsJson,
@@ -76,7 +77,12 @@ export class ProductsService {
     }
 
     if (query.category) {
-      where.category = query.category;
+      const categories = query.category.split(',').map(c => c.trim()).filter(Boolean);
+      where.category = categories.length === 1 ? categories[0] : { in: categories };
+    }
+
+    if (query.subcategory) {
+      where.subcategory = query.subcategory;
     }
 
     if (query.isPreorder !== undefined) {
@@ -131,7 +137,8 @@ export class ProductsService {
     }
 
     if (query.category) {
-      where.category = query.category;
+      const categories = query.category.split(',').map(c => c.trim()).filter(Boolean);
+      where.category = categories.length === 1 ? categories[0] : { in: categories };
     }
 
     if (query.status === 'published') {
@@ -359,6 +366,7 @@ export class ProductsService {
     isFeatured: 'Featured',
     isFlashDeal: 'Flash Deal',
     category: 'Category',
+    subcategory: 'Subcategory',
     estArrivalDate: 'ETA',
     preorderDepositType: 'Deposit Type',
     preorderDepositValue: 'Deposit Value',

@@ -153,6 +153,7 @@ model Product {
   preorderSlotTarget    Int?            @map("preorder_slot_target")
   shippingMethod        ShippingMethod? @map("shipping_method")
   category              String?
+  subcategory           String?
   imagesJson           String? @map("images_json") @db.Text
   specsJson            String? @map("specs_json") @db.Text
   optionsJson          String? @map("options_json") @db.Text
@@ -171,6 +172,7 @@ model Product {
   @@unique([slug, tenantId])
   @@index([tenantId])
   @@index([category])
+  @@index([category, subcategory])
   @@index([isPublished])
   @@map("products")
 }
