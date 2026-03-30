@@ -23,6 +23,25 @@ export class ProductQueryDto {
   @IsIn(['true', 'false'])
   isPreorder?: string;
 
+  @ApiPropertyOptional({ example: 10000, description: 'Minimum price in pesewas' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  minPrice?: number;
+
+  @ApiPropertyOptional({ example: 500000, description: 'Maximum price in pesewas' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  maxPrice?: number;
+
+  @ApiPropertyOptional({ example: 'true', description: 'Filter to only in-stock items' })
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  inStock?: string;
+
   @ApiPropertyOptional({ example: 1, default: 1 })
   @IsOptional()
   @Type(() => Number)

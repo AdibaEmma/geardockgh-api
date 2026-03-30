@@ -90,6 +90,16 @@ export class ProductsService {
       where.isPreorder = query.isPreorder === 'true';
     }
 
+    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+      where.pricePesewas = {};
+      if (query.minPrice !== undefined) where.pricePesewas.gte = query.minPrice;
+      if (query.maxPrice !== undefined) where.pricePesewas.lte = query.maxPrice;
+    }
+
+    if (query.inStock === 'true') {
+      where.stockCount = { gt: 0 };
+    }
+
     const orderBy: Prisma.ProductOrderByWithRelationInput = {};
     const sortField = query.sortBy ?? 'createdAt';
     const sortDir = query.sortOrder ?? 'desc';
