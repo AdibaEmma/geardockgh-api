@@ -80,7 +80,7 @@ export class ProductsService {
     }
 
     if (query.isPreorder !== undefined) {
-      where.isPreorder = query.isPreorder;
+      where.isPreorder = query.isPreorder === 'true';
     }
 
     const orderBy: Prisma.ProductOrderByWithRelationInput = {};
