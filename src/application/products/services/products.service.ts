@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, ShippingMethod } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import { StockNotificationService } from '../../notifications/services/stock-notification.service.js';
 import type { CreateProductDto } from '../dtos/create-product.dto.js';
@@ -41,6 +41,7 @@ export class ProductsService {
         specsJson: dto.specsJson,
         optionsJson: dto.optionsJson,
         preorderSlotTarget: dto.preorderSlotTarget ?? 0,
+        shippingMethod: dto.shippingMethod as ShippingMethod | undefined,
       },
       include: { variants: true },
     });
@@ -201,7 +202,13 @@ export class ProductsService {
     }
     const existing = await this.findById(id, tenantId);
 
-    const data: Prisma.ProductUpdateInput = { ...dto };
+    const { shippingMethod, ...rest } = dto;
+    const data: Prisma.ProductUpdateInput = {
+      ...rest,
+      ...(shippingMethod !== undefined && {
+        shippingMethod: shippingMethod as ShippingMethod | null,
+      }),
+    };
 
     if (dto.name) {
       data.slug = this.generateSlug(dto.name);
