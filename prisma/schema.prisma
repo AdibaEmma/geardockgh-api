@@ -45,6 +45,11 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum ShippingMethod {
+  AIR
+  SEA
+}
+
 // ─── TENANT ─────────────────────────────────────────────────────
 
 model Tenant {
@@ -144,8 +149,9 @@ model Product {
   preorderDepositType   String?   @map("preorder_deposit_type")
   preorderDepositValue  Int?      @map("preorder_deposit_value")
   preorderMinUnits      Int?      @map("preorder_min_units")
-  preorderSlotsTaken    Int       @default(0) @map("preorder_slots_taken")
-  preorderSlotTarget    Int?      @map("preorder_slot_target")
+  preorderSlotsTaken    Int             @default(0) @map("preorder_slots_taken")
+  preorderSlotTarget    Int?            @map("preorder_slot_target")
+  shippingMethod        ShippingMethod? @map("shipping_method")
   category              String?
   imagesJson           String? @map("images_json") @db.Text
   specsJson            String? @map("specs_json") @db.Text

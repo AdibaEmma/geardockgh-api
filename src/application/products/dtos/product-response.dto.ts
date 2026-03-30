@@ -31,6 +31,9 @@ export class ProductResponseDto {
   @ApiPropertyOptional({ example: 'Laptops' })
   category?: string;
 
+  @ApiPropertyOptional({ example: 'AIR', description: 'AIR or SEA shipping method for pre-orders' })
+  shippingMethod?: string;
+
   @ApiPropertyOptional()
   imagesJson?: string;
 

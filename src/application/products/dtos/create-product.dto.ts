@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -112,6 +113,12 @@ export class CreateProductDto {
   @IsInt()
   @Min(0)
   preorderSlotTarget?: number;
+
+  @ApiPropertyOptional({ example: 'AIR', description: 'Shipping method for pre-order: AIR or SEA' })
+  @IsOptional()
+  @IsString()
+  @IsIn(['AIR', 'SEA'])
+  shippingMethod?: string;
 
   @ApiPropertyOptional({
     example: '[{"name":"Color","type":"color","values":[{"label":"Black","hex":"#000000"}]}]',
