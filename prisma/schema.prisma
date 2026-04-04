@@ -145,6 +145,7 @@ model Product {
   isPublished          Boolean @default(false) @map("is_published")
   isFeatured           Boolean @default(false) @map("is_featured")
   isFlashDeal          Boolean @default(false) @map("is_flash_deal")
+  allowPreorderWhenOOS Boolean @default(false) @map("allow_preorder_when_oos")
   estArrivalDate        DateTime? @map("est_arrival_date")
   preorderDepositType   String?   @map("preorder_deposit_type")
   preorderDepositValue  Int?      @map("preorder_deposit_value")

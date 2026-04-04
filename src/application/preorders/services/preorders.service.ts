@@ -25,7 +25,11 @@ export class PreordersService {
       throw new NotFoundException('Product not found');
     }
 
-    if (!product.isPreorder) {
+    const isPreorderable =
+      product.isPreorder ||
+      (product.allowPreorderWhenOOS && product.stockCount === 0);
+
+    if (!isPreorderable) {
       throw new BadRequestException('Product is not available for pre-order');
     }
 

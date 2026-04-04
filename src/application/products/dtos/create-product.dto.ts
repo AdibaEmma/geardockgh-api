@@ -87,6 +87,11 @@ export class CreateProductDto {
   @IsBoolean()
   isFlashDeal?: boolean;
 
+  @ApiPropertyOptional({ example: false, description: 'Allow pre-order when out of stock' })
+  @IsOptional()
+  @IsBoolean()
+  allowPreorderWhenOOS?: boolean;
+
   @ApiPropertyOptional({ example: 'computing' })
   @IsOptional()
   @IsString()
