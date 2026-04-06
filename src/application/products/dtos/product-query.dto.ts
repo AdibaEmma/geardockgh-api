@@ -37,6 +37,11 @@ export class ProductQueryDto {
   @Min(0)
   maxPrice?: number;
 
+  @ApiPropertyOptional({ example: 'AIR', description: 'Filter by shipping method: "AIR" or "SEA"' })
+  @IsOptional()
+  @IsIn(['AIR', 'SEA'])
+  shippingMethod?: string;
+
   @ApiPropertyOptional({ example: 'true', description: 'Filter to only in-stock items' })
   @IsOptional()
   @IsIn(['true', 'false'])

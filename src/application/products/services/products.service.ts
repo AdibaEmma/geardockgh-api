@@ -97,6 +97,10 @@ export class ProductsService {
       if (query.maxPrice !== undefined) where.pricePesewas.lte = query.maxPrice;
     }
 
+    if (query.shippingMethod) {
+      where.shippingMethod = query.shippingMethod;
+    }
+
     if (query.inStock === 'true') {
       where.stockCount = { gt: 0 };
     }
