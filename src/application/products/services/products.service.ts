@@ -98,7 +98,7 @@ export class ProductsService {
     }
 
     if (query.shippingMethod) {
-      where.shippingMethod = query.shippingMethod;
+      where.shippingMethod = query.shippingMethod as ShippingMethod;
     }
 
     if (query.inStock === 'true') {
