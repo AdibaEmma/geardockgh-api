@@ -202,6 +202,12 @@ export class OrdersService {
       ];
     }
 
+    const allowedSortFields = ['orderNumber', 'status', 'totalPesewas', 'createdAt'];
+    const orderBy: any =
+      query.sortBy && allowedSortFields.includes(query.sortBy)
+        ? { [query.sortBy]: query.sortOrder ?? 'asc' }
+        : { createdAt: 'desc' };
+
     const [data, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
@@ -212,7 +218,7 @@ export class OrdersService {
             select: { id: true, firstName: true, lastName: true, email: true },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         skip,
         take: limit,
       }),

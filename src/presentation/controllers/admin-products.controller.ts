@@ -40,16 +40,20 @@ export class AdminProductsController {
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'category', required: false })
   @ApiQuery({ name: 'status', required: false, description: 'published | draft' })
+  @ApiQuery({ name: 'sortBy', required: false, description: 'Sort field: name, pricePesewas, stockCount, createdAt, category' })
+  @ApiQuery({ name: 'sortOrder', required: false, description: 'asc | desc' })
   async findAll(
     @Query('page') page = 1,
     @Query('limit') limit = 20,
     @Query('search') search?: string,
     @Query('category') category?: string,
     @Query('status') status?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
     @CurrentUser() user?: AuthenticatedUser,
   ) {
     return this.productsService.findAllAdmin(
-      { page: Number(page), limit: Number(limit), search, category, status },
+      { page: Number(page), limit: Number(limit), search, category, status, sortBy, sortOrder },
       user!.tenantId,
     );
   }

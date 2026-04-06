@@ -27,4 +27,14 @@ export class OrderQueryDto {
   @IsInt()
   @Min(1)
   limit?: number;
+
+  @ApiPropertyOptional({ description: 'Sort field: orderNumber, status, totalPesewas, createdAt' })
+  @IsOptional()
+  @IsString()
+  sortBy?: string;
+
+  @ApiPropertyOptional({ description: 'Sort direction', enum: ['asc', 'desc'] })
+  @IsOptional()
+  @IsString()
+  sortOrder?: 'asc' | 'desc';
 }

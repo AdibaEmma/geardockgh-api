@@ -136,7 +136,7 @@ export class ProductsService {
   }
 
   async findAllAdmin(
-    query: { page?: number; limit?: number; search?: string; category?: string; status?: string },
+    query: { page?: number; limit?: number; search?: string; category?: string; status?: string; sortBy?: string; sortOrder?: 'asc' | 'desc' },
     tenantId: string,
   ): Promise<PaginatedResult<unknown>> {
     const page = query.page ?? 1;
@@ -163,11 +163,17 @@ export class ProductsService {
       where.isPublished = false;
     }
 
+    const allowedSortFields = ['name', 'pricePesewas', 'stockCount', 'createdAt', 'category'];
+    const orderBy: Prisma.ProductOrderByWithRelationInput =
+      query.sortBy && allowedSortFields.includes(query.sortBy)
+        ? { [query.sortBy]: query.sortOrder ?? 'asc' }
+        : { createdAt: 'desc' };
+
     const [data, total] = await Promise.all([
       this.prisma.product.findMany({
         where,
         include: { variants: true },
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         skip,
         take: limit,
       }),

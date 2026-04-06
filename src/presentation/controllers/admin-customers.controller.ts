@@ -33,11 +33,15 @@ export class AdminCustomersController {
   @ApiQuery({ name: 'limit', required: false })
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'role', required: false, description: 'Filter by role (CUSTOMER | ADMIN)' })
+  @ApiQuery({ name: 'sortBy', required: false, description: 'Sort field: firstName, email, createdAt' })
+  @ApiQuery({ name: 'sortOrder', required: false, description: 'asc | desc' })
   async findAll(
     @Query('page') page = 1,
     @Query('limit') limit = 20,
     @Query('search') search?: string,
     @Query('role') role?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
     @CurrentUser() user?: AuthenticatedUser,
   ) {
     const tenantId = user!.tenantId;
@@ -57,10 +61,16 @@ export class AdminCustomersController {
       ];
     }
 
+    const allowedSortFields = ['firstName', 'email', 'createdAt'];
+    const orderBy: any =
+      sortBy && allowedSortFields.includes(sortBy)
+        ? { [sortBy]: sortOrder ?? 'asc' }
+        : { createdAt: 'desc' };
+
     const [customers, total] = await Promise.all([
       this.prisma.customer.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         skip,
         take: limit,
         select: {
