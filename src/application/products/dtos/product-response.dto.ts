@@ -43,6 +43,9 @@ export class ProductResponseDto {
   @ApiPropertyOptional()
   specsJson?: string;
 
+  @ApiPropertyOptional()
+  optionsJson?: string;
+
   @ApiProperty({ example: '2026-01-01T00:00:00.000Z' })
   createdAt!: string;
 
