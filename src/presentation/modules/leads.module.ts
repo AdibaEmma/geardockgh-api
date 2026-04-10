@@ -8,6 +8,6 @@ import { LeadStatsService } from '../../application/leads/services/lead-stats.se
 @Module({
   controllers: [LeadTrackingController],
   providers: [LeadService, LeadScoringService, LeadConversionService, LeadStatsService],
-  exports: [LeadService, LeadConversionService],
+  exports: [LeadService, LeadScoringService, LeadConversionService, LeadStatsService],
 })
 export class LeadsModule {}
