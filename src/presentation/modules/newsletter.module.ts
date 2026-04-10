@@ -3,9 +3,10 @@ import { NewsletterController } from '../controllers/newsletter.controller.js';
 import { NewsletterService } from '../../application/newsletter/services/newsletter.service.js';
 import { NotificationsModule } from '../../application/notifications/notifications.module.js';
 import { EmailSequencesModule } from './email-sequences.module.js';
+import { LeadsModule } from './leads.module.js';
 
 @Module({
-  imports: [NotificationsModule, forwardRef(() => EmailSequencesModule)],
+  imports: [NotificationsModule, forwardRef(() => EmailSequencesModule), LeadsModule],
   controllers: [NewsletterController],
   providers: [NewsletterService],
   exports: [NewsletterService],

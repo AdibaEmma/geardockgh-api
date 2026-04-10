@@ -3,10 +3,12 @@ import {
   BadRequestException,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { OrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import { ImportBrainSyncService } from '../../integrations/services/importbrain-sync.service.js';
+import { LeadConversionService } from '../../leads/services/lead-conversion.service.js';
 import type { CreateOrderDto } from '../dtos/create-order.dto.js';
 import type { UpdateOrderDto } from '../dtos/update-order.dto.js';
 import type { OrderQueryDto } from '../dtos/order-query.dto.js';
@@ -19,6 +21,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly importBrainSync: ImportBrainSyncService,
+    @Optional() private readonly leadConversionService?: LeadConversionService,
   ) {}
 
   async create(dto: CreateOrderDto, customerId: string, tenantId: string) {
@@ -121,6 +124,17 @@ export class OrdersService {
     this.importBrainSync.pushOrder(tenantId, order).catch((err) => {
       this.logger.warn(`Failed to push order to ImportBrain: ${err.message}`);
     });
+
+    // Track lead conversion (fire-and-forget)
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { email: true },
+    });
+    if (customer) {
+      this.leadConversionService
+        ?.markConverted(customer.email, tenantId, order.id)
+        .catch(() => {});
+    }
 
     return order;
   }

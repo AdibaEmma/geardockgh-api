@@ -50,6 +50,25 @@ enum ShippingMethod {
   SEA
 }
 
+enum LeadSource {
+  NEWSLETTER
+  REGISTRATION
+  WHATSAPP_INQUIRY
+  STOCK_NOTIFICATION
+  CART_ACTIVITY
+  WISHLIST
+  DIRECT_VISIT
+  REFERRAL
+}
+
+enum LeadStatus {
+  NEW
+  ENGAGED
+  QUALIFIED
+  CONVERTED
+  INACTIVE
+}
+
 // ─── TENANT ─────────────────────────────────────────────────────
 
 model Tenant {
@@ -549,4 +568,69 @@ model StockNotification {
   @@index([tenantId])
   @@index([productId])
   @@map("stock_notifications")
+}
+
+// ─── LEAD TRACKING ──────────────────────────────────────────────
+
+model Lead {
+  id               String      @id @default(uuid())
+  tenantId         String      @map("tenant_id")
+  customerId       String?     @map("customer_id")
+  email            String
+  source           LeadSource
+  status           LeadStatus  @default(NEW)
+  score            Int         @default(0)
+  firstTouchAt     DateTime    @default(now()) @map("first_touch_at")
+  lastActivityAt   DateTime    @default(now()) @map("last_activity_at")
+  convertedAt      DateTime?   @map("converted_at")
+  convertedOrderId String?     @map("converted_order_id")
+  metadata         String?     @db.Text
+
+  activities LeadActivity[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([email, tenantId])
+  @@index([tenantId])
+  @@index([status])
+  @@index([score])
+  @@index([source])
+  @@index([customerId])
+  @@index([lastActivityAt])
+  @@map("leads")
+}
+
+model LeadActivity {
+  id         String  @id @default(uuid())
+  leadId     String  @map("lead_id")
+  lead       Lead    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  tenantId   String  @map("tenant_id")
+  action     String
+  productId  String? @map("product_id")
+  metadata   String? @db.Text
+  scoreDelta Int     @default(0) @map("score_delta")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([leadId])
+  @@index([tenantId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("lead_activities")
+}
+
+model LeadScoringRule {
+  id       String  @id @default(uuid())
+  tenantId String  @map("tenant_id")
+  action   String
+  points   Int
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, action])
+  @@index([tenantId])
+  @@map("lead_scoring_rules")
 }

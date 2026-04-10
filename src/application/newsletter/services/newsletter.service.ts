@@ -2,6 +2,7 @@ import { Injectable, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import { ResendEmailService } from '../../notifications/services/resend-email.service.js';
 import { EmailSequenceService } from '../../email-sequences/services/email-sequence.service.js';
+import { LeadService } from '../../leads/services/lead.service.js';
 
 @Injectable()
 export class NewsletterService {
@@ -11,6 +12,7 @@ export class NewsletterService {
     private readonly prisma: PrismaService,
     private readonly emailService: ResendEmailService,
     @Optional() private readonly emailSequenceService?: EmailSequenceService,
+    @Optional() private readonly leadService?: LeadService,
   ) {}
 
   async subscribe(email: string, tenantId: string, source = 'website') {
@@ -41,6 +43,14 @@ export class NewsletterService {
     });
 
     this.logger.log(`New subscriber: ${normalizedEmail} (source: ${source})`);
+
+    // Track as lead
+    this.leadService
+      ?.recordActivity(normalizedEmail, tenantId, 'newsletter_signup', {
+        source: 'NEWSLETTER',
+        metadata: { source },
+      })
+      .catch(() => {}); // fire-and-forget
 
     await this.sendWelcomeEmail(normalizedEmail);
     await this.autoEnrollInActiveSequences(normalizedEmail, subscriber?.id ?? '', tenantId);

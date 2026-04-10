@@ -8,11 +8,13 @@ import { PasswordService } from '../../application/auth/services/password.servic
 import { TokenService } from '../../application/auth/services/token.service.js';
 import { JwtStrategy } from '../../infrastructure/auth/jwt.strategy.js';
 import { JwtRefreshStrategy } from '../../infrastructure/auth/jwt-refresh.strategy.js';
+import { LeadsModule } from './leads.module.js';
 import type { AppConfiguration } from '../../infrastructure/config/app.config.js';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
+    LeadsModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {

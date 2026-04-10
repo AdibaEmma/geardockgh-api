@@ -3,9 +3,11 @@ import {
   BadRequestException,
   NotFoundException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import { NotificationService } from './notification.service.js';
+import { LeadService } from '../../leads/services/lead.service.js';
 
 @Injectable()
 export class StockNotificationService {
@@ -14,6 +16,7 @@ export class StockNotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationService: NotificationService,
+    @Optional() private readonly leadService?: LeadService,
   ) {}
 
   async subscribe(productId: string, customerId: string, tenantId: string) {
@@ -40,6 +43,21 @@ export class StockNotificationService {
     await this.prisma.stockNotification.create({
       data: { tenantId, productId, customerId },
     });
+
+    // Track as lead activity
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { email: true },
+    });
+    if (customer) {
+      this.leadService
+        ?.recordActivity(customer.email, tenantId, 'stock_notify_subscribe', {
+          source: 'STOCK_NOTIFICATION',
+          productId,
+          customerId,
+        })
+        .catch(() => {});
+    }
 
     return { subscribed: true, alreadySubscribed: false };
   }

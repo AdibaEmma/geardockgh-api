@@ -3,10 +3,12 @@ import {
   ConflictException,
   UnauthorizedException,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import { PasswordService } from './password.service.js';
 import { TokenService, type TokenPair } from './token.service.js';
+import { LeadService } from '../../leads/services/lead.service.js';
 import type { CreateCustomerDto } from '../dtos/register.dto.js';
 import type { LoginDto } from '../dtos/login.dto.js';
 
@@ -28,6 +30,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly passwordService: PasswordService,
     private readonly tokenService: TokenService,
+    @Optional() private readonly leadService?: LeadService,
   ) {}
 
   async register(
@@ -61,6 +64,14 @@ export class AuthService {
       role: customer.role,
       tenantId: customer.tenantId,
     });
+
+    // Track lead on registration
+    this.leadService
+      ?.recordActivity(customer.email, tenantId, 'account_created', {
+        source: 'REGISTRATION',
+        customerId: customer.id,
+      })
+      .catch(() => {}); // fire-and-forget
 
     return {
       ...tokens,

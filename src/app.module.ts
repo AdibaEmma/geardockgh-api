@@ -21,6 +21,7 @@ import { UploadsModule } from './presentation/modules/uploads.module.js';
 import { NewsletterModule } from './presentation/modules/newsletter.module.js';
 import { BundlesModule } from './presentation/modules/bundles.module.js';
 import { EmailSequencesModule } from './presentation/modules/email-sequences.module.js';
+import { LeadsModule } from './presentation/modules/leads.module.js';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { EmailSequencesModule } from './presentation/modules/email-sequences.mod
     NewsletterModule,
     BundlesModule,
     EmailSequencesModule,
+    LeadsModule,
   ],
   controllers: [],
   providers: [],
