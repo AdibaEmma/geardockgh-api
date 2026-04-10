@@ -21,18 +21,6 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  app.use(helmet({
-    contentSecurityPolicy: appConfig.nodeEnv === 'production' ? undefined : false,
-    hsts: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-      preload: true,
-    },
-    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-  }));
-  app.use(compression());
-  app.use(cookieParser());
-
   const corsOrigins = appConfig.corsOrigins.length > 0
     ? appConfig.corsOrigins
     : appConfig.frontendUrl;
@@ -48,6 +36,19 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Service-Key'],
     maxAge: 86400,
   });
+
+  app.use(helmet({
+    contentSecurityPolicy: appConfig.nodeEnv === 'production' ? undefined : false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  }));
+  app.use(compression());
+  app.use(cookieParser());
 
   app.useGlobalPipes(
     new ValidationPipe({
