@@ -66,6 +66,11 @@ export class CreateAdminOrderDto {
   @IsEnum(['CASH', 'MOMO', 'BANK_TRANSFER'])
   paymentMethod!: 'CASH' | 'MOMO' | 'BANK_TRANSFER';
 
+  @ApiPropertyOptional({ enum: ['PENDING_PAYMENT', 'PAYMENT_CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'] })
+  @IsString()
+  @IsOptional()
+  status?: string;
+
   @ApiPropertyOptional()
   @IsString()
   @IsOptional()
