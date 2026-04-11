@@ -12,6 +12,7 @@ export class ImportBrainSyncService {
     id: string;
     orderNumber: string;
     status: string;
+    source?: string;
     subtotalPesewas: number;
     totalPesewas: number;
     shippingAddressId: string | null;
@@ -55,7 +56,7 @@ export class ImportBrainSyncService {
       items,
       subtotal: order.subtotalPesewas / 100,
       totalAmount: order.totalPesewas / 100,
-      salesChannel: 'WEBSITE',
+      salesChannel: order.source === 'manual' ? 'WALK_IN' : 'WEBSITE',
     };
 
     if (order.customer) {

@@ -311,7 +311,7 @@ export class OrdersService {
       throw new NotFoundException('Order not found');
     }
 
-    return this.prisma.order.update({
+    const updated = await this.prisma.order.update({
       where: { id },
       data: {
         status: dto.status,
@@ -320,8 +320,18 @@ export class OrdersService {
       include: {
         items: { include: { product: true, variant: true } },
         payments: true,
+        customer: true,
       },
     });
+
+    // Sync status update to ImportBrain (fire-and-forget)
+    if (dto.status && dto.status !== order.status) {
+      this.importBrainSync.pushOrder(tenantId, updated).catch((err) => {
+        this.logger.warn(`Failed to sync order status to ImportBrain: ${err.message}`);
+      });
+    }
+
+    return updated;
   }
 
   async cancel(id: string, customerId: string, tenantId: string) {
