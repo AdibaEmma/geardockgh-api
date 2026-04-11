@@ -223,6 +223,7 @@ model Order {
   customerId       String      @map("customer_id")
   customer         Customer    @relation(fields: [customerId], references: [id])
   status           OrderStatus @default(PENDING_PAYMENT)
+  source           String      @default("online")
   totalPesewas     Int         @map("total_pesewas")
   subtotalPesewas  Int         @map("subtotal_pesewas")
   deliveryFee      Int         @default(0) @map("delivery_fee")

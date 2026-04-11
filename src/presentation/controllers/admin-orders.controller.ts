@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { OrdersService } from '../../application/orders/services/orders.service.
 import { OrderQueryDto } from '../../application/orders/dtos/order-query.dto.js';
 import { UpdateOrderDto } from '../../application/orders/dtos/update-order.dto.js';
 import { BulkUpdateOrdersDto } from '../../application/orders/dtos/bulk-update-orders.dto.js';
+import { CreateAdminOrderDto } from '../../application/orders/dtos/create-admin-order.dto.js';
 import { JwtAuthGuard } from '../../infrastructure/auth/jwt-auth.guard.js';
 import { RolesGuard } from '../../infrastructure/auth/roles.guard.js';
 import { Roles } from '../../infrastructure/auth/roles.decorator.js';
@@ -30,6 +32,15 @@ import type { AuthenticatedUser } from '../../infrastructure/auth/jwt.strategy.j
 @Controller('admin/orders')
 export class AdminOrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Create a manual order (admin)' })
+  async createManual(
+    @Body() dto: CreateAdminOrderDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.ordersService.createManualOrder(dto, user.tenantId);
+  }
 
   @Get()
   @ApiOperation({ summary: 'List all orders (admin)' })

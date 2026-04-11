@@ -9,7 +9,9 @@ import { OrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import { ImportBrainSyncService } from '../../integrations/services/importbrain-sync.service.js';
 import { LeadConversionService } from '../../leads/services/lead-conversion.service.js';
+import { randomBytes } from 'crypto';
 import type { CreateOrderDto } from '../dtos/create-order.dto.js';
+import type { CreateAdminOrderDto } from '../dtos/create-admin-order.dto.js';
 import type { UpdateOrderDto } from '../dtos/update-order.dto.js';
 import type { OrderQueryDto } from '../dtos/order-query.dto.js';
 import type { PaginatedResult } from '../../../core/interfaces/pagination.interface.js';
@@ -362,6 +364,162 @@ export class OrdersService {
         },
       });
     });
+  }
+
+  async createManualOrder(dto: CreateAdminOrderDto, tenantId: string) {
+    // Resolve or create customer
+    let customerId = dto.customerId;
+
+    if (!customerId) {
+      // Check if customer with this email or phone already exists
+      if (dto.customerEmail) {
+        const existing = await this.prisma.customer.findUnique({
+          where: { email_tenantId: { email: dto.customerEmail, tenantId } },
+        });
+        if (existing) {
+          customerId = existing.id;
+        }
+      }
+
+      if (!customerId) {
+        // Create a walk-in customer with a placeholder password
+        const email = dto.customerEmail || `walkin-${Date.now()}@geardockgh.local`;
+        const customer = await this.prisma.customer.create({
+          data: {
+            tenantId,
+            firstName: dto.customerName.split(' ')[0] || dto.customerName,
+            lastName: dto.customerName.split(' ').slice(1).join(' ') || '',
+            email,
+            passwordHash: randomBytes(32).toString('hex'),
+            phone: dto.customerPhone,
+          },
+        });
+        customerId = customer.id;
+      }
+    }
+
+    // Validate products and build order items (same as create)
+    const productIds = dto.items.map((i) => i.productId);
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds }, tenantId, deletedAt: null },
+      include: { variants: true },
+    });
+
+    if (products.length !== productIds.length) {
+      throw new BadRequestException('One or more products not found');
+    }
+
+    let subtotalPesewas = 0;
+    const orderItemsData: {
+      productId: string;
+      variantId: string | null;
+      quantity: number;
+      unitPricePesewas: number;
+      selectedOptionsJson: string | null;
+    }[] = [];
+
+    for (const item of dto.items) {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product) {
+        throw new BadRequestException(`Product ${item.productId} not found`);
+      }
+
+      let unitPrice = product.pricePesewas;
+      let availableStock = product.stockCount;
+
+      if (item.variantId) {
+        const variant = product.variants.find((v) => v.id === item.variantId);
+        if (!variant) {
+          throw new BadRequestException(`Variant ${item.variantId} not found`);
+        }
+        unitPrice = variant.pricePesewas;
+        availableStock = variant.stockCount;
+      }
+
+      if (availableStock < item.quantity) {
+        throw new BadRequestException(
+          `Insufficient stock for "${product.name}". Available: ${availableStock}`,
+        );
+      }
+
+      subtotalPesewas += unitPrice * item.quantity;
+      orderItemsData.push({
+        productId: item.productId,
+        variantId: item.variantId ?? null,
+        quantity: item.quantity,
+        unitPricePesewas: unitPrice,
+        selectedOptionsJson: item.selectedOptions ?? null,
+      });
+    }
+
+    const deliveryFee = dto.deliveryFee ?? 0;
+    const discount = dto.discountPesewas ?? 0;
+    const totalPesewas = subtotalPesewas + deliveryFee - discount;
+    const orderNumber = this.generateOrderNumber();
+
+    // Map payment method to PaymentProvider enum
+    const providerMap: Record<string, 'PAYSTACK' | 'MOMO' | 'BANK_TRANSFER'> = {
+      CASH: 'BANK_TRANSFER',
+      MOMO: 'MOMO',
+      BANK_TRANSFER: 'BANK_TRANSFER',
+    };
+
+    const order = await this.prisma.$transaction(async (tx) => {
+      const newOrder = await tx.order.create({
+        data: {
+          tenantId,
+          orderNumber,
+          customerId,
+          source: 'manual',
+          status: 'PAYMENT_CONFIRMED',
+          subtotalPesewas,
+          totalPesewas,
+          deliveryFee,
+          discountPesewas: discount,
+          notes: dto.notes ? `[Manual Sale — ${dto.paymentMethod}] ${dto.notes}` : `[Manual Sale — ${dto.paymentMethod}]`,
+          items: { create: orderItemsData },
+          payments: {
+            create: {
+              provider: providerMap[dto.paymentMethod],
+              amountPesewas: totalPesewas,
+              status: 'SUCCESS',
+              paidAt: new Date(),
+            },
+          },
+        },
+        include: {
+          items: { include: { product: true, variant: true } },
+          payments: true,
+          customer: true,
+        },
+      });
+
+      // Decrement stock
+      for (const item of orderItemsData) {
+        if (item.variantId) {
+          await tx.productVariant.update({
+            where: { id: item.variantId },
+            data: { stockCount: { decrement: item.quantity } },
+          });
+        } else {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: { stockCount: { decrement: item.quantity } },
+          });
+        }
+      }
+
+      return newOrder;
+    });
+
+    // Push to ImportBrain (fire-and-forget)
+    this.importBrainSync.pushOrder(tenantId, order).catch((err) => {
+      this.logger.warn(`Failed to push manual order to ImportBrain: ${err.message}`);
+    });
+
+    this.logger.log(`Manual order created: ${orderNumber} (${dto.paymentMethod})`);
+
+    return order;
   }
 
   private generateOrderNumber(): string {
