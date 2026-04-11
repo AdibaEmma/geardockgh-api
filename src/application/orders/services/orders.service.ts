@@ -9,6 +9,7 @@ import { OrderStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../infrastructure/database/prisma.service.js';
 import { ImportBrainSyncService } from '../../integrations/services/importbrain-sync.service.js';
 import { LeadConversionService } from '../../leads/services/lead-conversion.service.js';
+import { DiscountService } from '../../discounts/services/discount.service.js';
 import { randomBytes } from 'crypto';
 import type { CreateOrderDto } from '../dtos/create-order.dto.js';
 import type { CreateAdminOrderDto } from '../dtos/create-admin-order.dto.js';
@@ -24,6 +25,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly importBrainSync: ImportBrainSyncService,
     @Optional() private readonly leadConversionService?: LeadConversionService,
+    @Optional() private readonly discountService?: DiscountService,
   ) {}
 
   async create(dto: CreateOrderDto, customerId: string, tenantId: string) {
@@ -82,7 +84,19 @@ export class OrdersService {
     }
 
     const orderNumber = this.generateOrderNumber();
-    const totalPesewas = subtotalPesewas;
+
+    // Apply discount code if provided
+    let discountPesewas = 0;
+    let appliedDiscountCode: string | null = null;
+    if (dto.discountCode && this.discountService) {
+      const result = await this.discountService.validate(dto.discountCode, subtotalPesewas, tenantId);
+      if (result.valid) {
+        discountPesewas = result.discountPesewas;
+        appliedDiscountCode = dto.discountCode.toUpperCase().trim();
+      }
+    }
+
+    const totalPesewas = subtotalPesewas - discountPesewas;
 
     const order = await this.prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
@@ -92,6 +106,8 @@ export class OrdersService {
           customerId,
           subtotalPesewas,
           totalPesewas,
+          discountPesewas,
+          discountCode: appliedDiscountCode,
           shippingAddressId: dto.shippingAddressId,
           notes: dto.notes,
           items: {
@@ -121,6 +137,11 @@ export class OrdersService {
 
       return newOrder;
     });
+
+    // Redeem discount code (fire-and-forget)
+    if (appliedDiscountCode) {
+      this.discountService?.redeem(appliedDiscountCode, tenantId).catch(() => {});
+    }
 
     // Push order to ImportBrain (fire-and-forget)
     this.importBrainSync.pushOrder(tenantId, order).catch((err) => {

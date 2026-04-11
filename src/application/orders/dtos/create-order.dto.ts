@@ -48,6 +48,11 @@ export class CreateOrderDto {
   @IsUUID()
   shippingAddressId?: string;
 
+  @ApiPropertyOptional({ example: 'WELCOME10' })
+  @IsOptional()
+  @IsString()
+  discountCode?: string;
+
   @ApiPropertyOptional({ example: 'Please deliver before 5pm' })
   @IsOptional()
   @IsString()

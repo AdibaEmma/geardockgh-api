@@ -228,6 +228,7 @@ model Order {
   subtotalPesewas  Int         @map("subtotal_pesewas")
   deliveryFee      Int         @default(0) @map("delivery_fee")
   discountPesewas  Int         @default(0) @map("discount_pesewas")
+  discountCode     String?     @map("discount_code")
   shippingAddressId String?    @map("shipping_address_id")
   shippingAddress  Address?    @relation(fields: [shippingAddressId], references: [id])
   notes            String?
@@ -569,6 +570,28 @@ model StockNotification {
   @@index([tenantId])
   @@index([productId])
   @@map("stock_notifications")
+}
+
+// ─── DISCOUNT CODES ─────────────────────────────────────────────
+
+model DiscountCode {
+  id              String    @id @default(uuid())
+  tenantId        String    @map("tenant_id")
+  code            String
+  type            String    @default("percentage") // "percentage" | "fixed"
+  value           Int                              // pesewas for fixed, basis points (1000 = 10%) for percentage
+  minOrderPesewas Int?      @map("min_order_pesewas")
+  maxUses         Int?      @map("max_uses")
+  usedCount       Int       @default(0) @map("used_count")
+  isActive        Boolean   @default(true) @map("is_active")
+  expiresAt       DateTime? @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([code, tenantId])
+  @@index([tenantId])
+  @@map("discount_codes")
 }
 
 // ─── LEAD TRACKING ──────────────────────────────────────────────
