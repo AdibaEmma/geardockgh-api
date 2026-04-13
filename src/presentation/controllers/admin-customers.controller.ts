@@ -36,8 +36,8 @@ export class AdminCustomersController {
   @ApiQuery({ name: 'sortBy', required: false, description: 'Sort field: firstName, email, createdAt' })
   @ApiQuery({ name: 'sortOrder', required: false, description: 'asc | desc' })
   async findAll(
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
+    @Query('page') rawPage?: string,
+    @Query('limit') rawLimit?: string,
     @Query('search') search?: string,
     @Query('role') role?: string,
     @Query('sortBy') sortBy?: string,
@@ -45,6 +45,8 @@ export class AdminCustomersController {
     @CurrentUser() user?: AuthenticatedUser,
   ) {
     const tenantId = user!.tenantId;
+    const page = Number(rawPage) || 1;
+    const limit = Number(rawLimit) || 20;
     const skip = (page - 1) * limit;
 
     const where: any = { tenantId, deletedAt: null };
