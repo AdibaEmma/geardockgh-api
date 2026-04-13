@@ -13,4 +13,9 @@ export class UpdateOrderDto {
   @IsString()
   @MaxLength(500)
   notes?: string;
+
+  @ApiPropertyOptional({ example: '2026-04-10T12:00:00.000Z', description: 'Override order date' })
+  @IsOptional()
+  @IsString()
+  orderDate?: string;
 }

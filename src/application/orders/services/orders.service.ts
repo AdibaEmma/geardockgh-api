@@ -337,6 +337,7 @@ export class OrdersService {
       data: {
         status: dto.status,
         notes: dto.notes,
+        ...(dto.orderDate ? { createdAt: new Date(dto.orderDate) } : {}),
       },
       include: {
         items: { include: { product: true, variant: true } },
@@ -508,6 +509,7 @@ export class OrdersService {
           deliveryFee,
           discountPesewas: discount,
           notes: dto.notes ? `[Manual Sale — ${dto.paymentMethod}] ${dto.notes}` : `[Manual Sale — ${dto.paymentMethod}]`,
+          ...(dto.orderDate ? { createdAt: new Date(dto.orderDate) } : {}),
           items: { create: orderItemsData },
           payments: {
             create: {

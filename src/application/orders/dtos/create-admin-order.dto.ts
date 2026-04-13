@@ -87,4 +87,9 @@ export class CreateAdminOrderDto {
   @Min(0)
   @IsOptional()
   discountPesewas?: number;
+
+  @ApiPropertyOptional({ example: '2026-04-10T12:00:00.000Z', description: 'Override order date (ISO string)' })
+  @IsString()
+  @IsOptional()
+  orderDate?: string;
 }
