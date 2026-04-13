@@ -6,13 +6,15 @@ import { AdminTenantsController } from '../controllers/admin-tenants.controller.
 import { AdminProductsController } from '../controllers/admin-products.controller.js';
 import { AdminLeadsController } from '../controllers/admin-leads.controller.js';
 import { AdminDiscountsController } from '../controllers/admin-discounts.controller.js';
+import { AdminReviewsController } from '../controllers/admin-reviews.controller.js';
 import { OrdersModule } from './orders.module.js';
 import { ProductsModule } from './products.module.js';
 import { LeadsModule } from './leads.module.js';
 import { DiscountsModule } from './discounts.module.js';
+import { ReviewsModule } from './reviews.module.js';
 
 @Module({
-  imports: [OrdersModule, ProductsModule, LeadsModule, DiscountsModule],
+  imports: [OrdersModule, ProductsModule, LeadsModule, DiscountsModule, ReviewsModule],
   controllers: [
     AdminOrdersController,
     AdminStatsController,
@@ -21,6 +23,7 @@ import { DiscountsModule } from './discounts.module.js';
     AdminProductsController,
     AdminLeadsController,
     AdminDiscountsController,
+    AdminReviewsController,
   ],
 })
 export class AdminModule {}

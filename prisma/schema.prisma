@@ -50,6 +50,12 @@ enum ShippingMethod {
   SEA
 }
 
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum LeadSource {
   NEWSLETTER
   REGISTRATION
@@ -101,6 +107,7 @@ model Customer {
   addresses          Address[]
   refreshTokens      RefreshToken[]
   stockNotifications StockNotification[]
+  reviews            Review[]
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -184,6 +191,7 @@ model Product {
   auditLogs          ProductAuditLog[]
   stockNotifications StockNotification[]
   bundleItems        BundleItem[]
+  reviews            Review[]
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
@@ -570,6 +578,35 @@ model StockNotification {
   @@index([tenantId])
   @@index([productId])
   @@map("stock_notifications")
+}
+
+// ─── REVIEWS ────────────────────────────────────────────────────
+
+model Review {
+  id          String       @id @default(uuid())
+  tenantId    String       @map("tenant_id")
+  productId   String       @map("product_id")
+  customerId  String       @map("customer_id")
+  orderId     String?      @map("order_id")
+  rating      Int
+  title       String?
+  text        String?      @db.Text
+  imagesJson  String?      @map("images_json") @db.Text
+  isVerified  Boolean      @default(false) @map("is_verified")
+  status      ReviewStatus @default(APPROVED)
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([productId, customerId, tenantId])
+  @@index([tenantId])
+  @@index([productId])
+  @@index([customerId])
+  @@index([status])
+  @@map("reviews")
 }
 
 // ─── DISCOUNT CODES ─────────────────────────────────────────────
