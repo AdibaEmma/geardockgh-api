@@ -18,6 +18,10 @@ export class ProductsService {
     this.validateImagesJson(dto.imagesJson);
     const slug = this.generateSlug(dto.name);
 
+    if (dto.isPublished) {
+      this.assertPriced({ name: dto.name, pricePesewas: dto.pricePesewas });
+    }
+
     const product = await this.prisma.product.create({
       data: {
         tenantId,
@@ -204,6 +208,36 @@ export class ProductsService {
     return product;
   }
 
+  /**
+   * A published product must have a price.
+   *
+   * Nothing else sets one: `pricePesewas` is a mirror of ImportBrain's selling
+   * price, which is optional there, so an unpriced product syncs across as 0.
+   * Checkout charges whatever this field holds, so publishing one lists it at
+   * GHS 0.00 and it will be bought at that price. The sync creates products
+   * unpublished for this reason — this is the other half of that guard.
+   */
+  private assertPriced(product: {
+    name: string;
+    pricePesewas: number;
+    variants?: Array<{ name: string; pricePesewas: number }>;
+  }): void {
+    if (product.pricePesewas <= 0) {
+      throw new BadRequestException(
+        `"${product.name}" has no price set, so it cannot be published. Set a price in ImportBrain and sync, or price it here first.`,
+      );
+    }
+
+    const free = (product.variants ?? []).find(
+      (variant) => variant.pricePesewas <= 0,
+    );
+    if (free) {
+      throw new BadRequestException(
+        `Variant "${free.name}" of "${product.name}" has no price set, so the product cannot be published.`,
+      );
+    }
+  }
+
   async findById(id: string, tenantId: string) {
     const product = await this.prisma.product.findFirst({
       where: { id, tenantId, deletedAt: null },
@@ -237,6 +271,18 @@ export class ProductsService {
 
     // Capture field-level changes for audit trail
     const changes = this.diffChanges(existing as Record<string, unknown>, dto as unknown as Record<string, unknown>);
+
+    // Guard the state the product ends up in, not just the field that moved:
+    // publishing an unpriced product and zeroing a published one's price are
+    // the same mistake arriving from two directions.
+    const willBePublished = dto.isPublished ?? existing.isPublished;
+    if (willBePublished) {
+      this.assertPriced({
+        name: dto.name ?? existing.name,
+        pricePesewas: dto.pricePesewas ?? existing.pricePesewas,
+        variants: existing.variants,
+      });
+    }
 
     const wasOutOfStock = existing.stockCount === 0;
 

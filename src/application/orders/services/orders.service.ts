@@ -67,6 +67,15 @@ export class OrdersService {
         availableStock = variant.stockCount;
       }
 
+      // Last line of defence: a product is only publishable with a price, but
+      // this is the point where money is decided, so it refuses an unpriced
+      // line outright rather than selling it for nothing.
+      if (unitPrice <= 0) {
+        throw new BadRequestException(
+          `"${product.name}" is not currently available for purchase.`,
+        );
+      }
+
       if (!product.isPreorder && availableStock < item.quantity) {
         throw new BadRequestException(
           `Insufficient stock for "${product.name}". Available: ${availableStock}`,
@@ -466,6 +475,12 @@ export class OrdersService {
         }
         unitPrice = variant.pricePesewas;
         availableStock = variant.stockCount;
+      }
+
+      if (unitPrice <= 0) {
+        throw new BadRequestException(
+          `"${product.name}" is not currently available for purchase.`,
+        );
       }
 
       if (availableStock < item.quantity) {
